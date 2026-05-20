@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepLink一键唤起</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{padding:30px;background:#f5f7fa;font-family:system-ui,sans-serif;}
+        .box{max-width:500px;margin:0 auto;background:#fff;padding:25px;border-radius:12px;box-shadow:0 2px 15px #00000015;}
+        h2{text-align:center;color:#333;margin-bottom:20px;}
+        .input-box{margin-bottom:20px;}
+        label{display:block;margin-bottom:8px;color:#666;}
+        input{width:100%;padding:12px 15px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;}
+        input:focus{border-color:#007aff;}
+        .btn{width:100%;padding:13px;background:#007aff;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;}
+        .btn:active{background:#0066dd;}
+        .tip{margin-top:15px;text-align:center;color:#999;font-size:14px;line-height:1.6;}
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>DeepLink 唤起工具</h2>
+        <div class="input-box">
+            <label>输入DeepLink链接</label>
+            <input type="text" id="linkInput" placeholder="例：weixin://、alipays://、自定义协议://xxx">
+        </div>
+        <button class="btn" onclick="callDeepLink()">立即唤起APP</button>
+        <div class="tip">
+            1. 安卓浏览器直接唤起<br>
+            2. 未安装APP会自动超时<br>
+            3. 微信内需右上角打开默认浏览器
+        </div>
+    </div>
+
+    <script>
+        function callDeepLink(){
+            let link = document.getElementById('linkInput').value.trim();
+            if(!link){
+                alert('请输入DeepLink链接');
+                return;
+            }
+            // 执行唤起
+            window.location.href = link;
+            // 2秒超时提示
+            setTimeout(()=>{
+                alert('未唤起成功，可能未安装对应APP或链接错误');
+            },2000)
+        }
+    </script>
+</body>
+</html>
