@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSBridge 安全验证 POC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        .status {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #f0fff4;
+            border-left-color: #48bb78;
+        }
+        .status.error {
+            background: #fff5f5;
+            border-left-color: #f56565;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 8px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #38a169;
+        }
+        .log-container {
+            background: #1a202c;
+            color: #68d391;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+        }
+        .log-item {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #2d3748;
+        }
+        .section {
+            margin: 25px 0;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 8px;
+        }
+        .section h2 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #4a5568;
+        }
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .warning {
+            background: #fffaf0;
+            border: 2px solid #ed8936;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .warning h3 {
+            color: #c05621;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 JSBridge 安全验证 POC</h1>
+        
+        <div class="warning">
+            <h3>⚠️ 安全警告</h3>
+            <p>此 POC 仅用于授权的安全测试。请确保您拥有该应用的测试权限。</p>
+        </div>
+
+        <div class="status" id="bridgeStatus">
+            <strong>状态：</strong> 等待连接...
+        </div>
+
+        <div class="section">
+            <h2>📋 测试 JSBridge 功能</h2>
+            <div class="input-group">
+                <button class="btn btn-primary" onclick="testAppInfo()">获取应用信息</button>
+                <button class="btn btn-primary" onclick="testToast()">显示 Toast</button>
+                <button class="btn btn-primary" onclick="testShare()">分享测试</button>
+                <button class="btn btn-danger" onclick="testAll()">测试所有功能</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔧 自定义 JSBridge 调用</h2>
+            <div class="input-group">
+                <label>功能名称：</label>
+                <input type="text" id="funcName" placeholder="例如: appInfo, toast, share">
+            </div>
+            <div class="input-group">
+                <label>参数(JSON)：</label>
+                <textarea id="funcParams" rows="3" placeholder='{"message": "测试"}'></textarea>
+            </div>
+            <button class="btn btn-success" onclick="callCustomFunction()">调用自定义功能</button>
+        </div>
+
+        <div class="section">
+            <h2>📊 测试日志</h2>
+            <div class="log-container" id="logContainer">
+                <div class="log-item">等待测试开始...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            const item = document.createElement('div');
+            item.className = 'log-item';
+            item.textContent = `[${timestamp}] [${type.toUpperCase()}] ${message}`;
+            container.appendChild(item);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateStatus(message, isSuccess = null) {
+            const status = document.getElementById('bridgeStatus');
+            status.innerHTML = `<strong>状态：</strong> ${message}`;
+            status.className = 'status';
+            if (isSuccess === true) status.classList.add('success');
+            if (isSuccess === false) status.classList.add('error');
+        }
+
+        function testAppInfo() {
+            log('开始测试 appInfo 功能');
+            try {
+                if (typeof JS2NativeBridge !== 'undefined' && JS2NativeBridge.appInfo) {
+                    JS2NativeBridge.appInfo();
+                    log('appInfo 功能调用成功', 'success');
+                } else if (window.DPBridgeSdk) {
+                    log('检测到 DPBridgeSdk');
+                } else {
+                    log('JSBridge 对象未找到，尝试注入', 'warning');
+                    simulateBridgeCall('appInfo');
+                }
+            } catch (e) {
+                log(`appInfo 调用失败: ${e.message}`, 'error');
+            }
+        }
+
+        function testToast() {
+            log('开始测试 toast 功能');
+            try {
+                simulateBridgeCall('toast', { message: '安全测试 - Toast 验证' });
+                log('toast 功能调用成功', 'success');
+            } catch (e) {
+                log(`toast 调用失败: ${e.message}`, 'error');
+            }
+        }
+
+        function testShare() {
+            log('开始测试 share 功能');
+            try {
+                simulateBridgeCall('share', {
+                    title: '安全测试',
+                    content: '这是一个安全测试分享'
+                });
+                log('share 功能调用成功', 'success');
+            } catch (e) {
+                log(`share 调用失败: ${e.message}`, 'error');
+            }
+        }
+
+        function testAll() {
+            log('========== 开始完整测试 ==========', 'warning');
+            testAppInfo();
+            setTimeout(() => testToast(), 1000);
+            setTimeout(() => testShare(), 2000);
+        }
+
+        function simulateBridgeCall(funcName, params = {}) {
+            const callbackId = 'cb_' + Date.now();
+            log(`模拟调用 ${funcName}, 参数: ${JSON.stringify(params)}`);
+            
+            if (typeof JS2NativeBridge !== 'undefined') {
+                if (JS2NativeBridge[funcName]) {
+                    JS2NativeBridge[funcName](JSON.stringify(params), callbackId);
+                }
+            } else if (typeof window.JS2NativeBridge !== 'undefined') {
+                if (window.JS2NativeBridge[funcName]) {
+                    window.JS2NativeBridge[funcName](JSON.stringify(params), callbackId);
+                }
+            }
+        }
+
+        function callCustomFunction() {
+            const funcName = document.getElementById('funcName').value;
+            const paramsText = document.getElementById('funcParams').value;
+            
+            if (!funcName) {
+                alert('请输入功能名称');
+                return;
+            }
+
+            try {
+                const params = paramsText ? JSON.parse(paramsText) : {};
+                log(`自定义调用: ${funcName}`);
+                simulateBridgeCall(funcName, params);
+            } catch (e) {
+                log(`参数解析错误: ${e.message}`, 'error');
+            }
+        }
+
+        window.onload = function() {
+            log('POC 页面加载完成');
+            updateStatus('POC 已就绪，请选择测试功能');
+            
+            setTimeout(() => {
+                log('检测 JSBridge 环境...');
+                if (typeof JS2NativeBridge !== 'undefined') {
+                    updateStatus('JSBridge 已检测到！', true);
+                    log('发现 JS2NativeBridge 对象', 'success');
+                } else if (window.DPBridgeSdk) {
+                    updateStatus('DPBridgeSdk 已检测到！', true);
+                    log('发现 DPBridgeSdk 对象', 'success');
+                } else {
+                    updateStatus('JSBridge 未直接检测到，可能需要在应用WebView中加载', false);
+                    log('请在目标应用 WebView 中打开此页面进行测试', 'warning');
+                }
+            }, 500);
+        };
+    </script>
+</body>
+</html>
