@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>爱奇艺极速版 - JSBridge Deeplink POC</title>
+    <title>爱奇艺极速版 - JSBridge Deeplink POC (验证版)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -28,6 +28,14 @@
             padding: 15px;
             margin: 15px 0;
             color: #856404;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 2px solid #17a2b8;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            color: #0c5460;
         }
         .section {
             margin: 20px 0;
@@ -141,20 +149,26 @@
         </div>
 
         <div id="deeplink" class="tab-content active">
+            <div class="info">
+                <strong>📌 基于 AndroidManifest.xml 验证结果</strong><br>
+                此页面只提供经过确认支持的 deeplink 方案。
+            </div>
+            
             <div class="section">
                 <h2>📱 Deeplink 唤起测试</h2>
                 
                 <div class="input-group">
                     <label>目标 URL（测试页面）：</label>
-                    <input type="text" id="targetUrl" value="https://lite.m.iqiyi.com" placeholder="输入要加载的URL">
+                    <input type="text" id="targetUrl" value="https://your-server.com/deeplink-poc.html" placeholder="输入要加载的URL">
                 </div>
 
                 <div class="input-group">
                     <label>选择路由类型：</label>
                     <select id="routeType">
-                        <option value="common_webview">iqiyi://router/common_webview</option>
-                        <option value="online_service_new">iqiyi://router/online_service_new</option>
-                        <option value="lite_webview">iqiyilite://router/lite/webview/main_page</option>
+                        <option value="universal_action">Universal Link - /action/ (推荐)</option>
+                        <option value="universal_main">Universal Link - /main/a/</option>
+                        <option value="iqiyilite_dynamic">iqiyilite:// - dynamic_transfer</option>
+                        <option value="iqiyilite_register">iqiyilite:// - register_business</option>
                     </select>
                 </div>
 
@@ -196,11 +210,13 @@
                 <p style="margin-bottom: 10px;"><strong>方式1：Universal Link (推荐)</strong></p>
                 <div class="link-display">https://lite.m.iqiyi.com/action/test?url=REPLACE_URL</div>
                 
-                <p style="margin-bottom: 10px; margin-top: 15px;"><strong>方式2：自定义协议</strong></p>
-                <div class="link-display">iqiyilite://mobile/test?url=REPLACE_URL</div>
+                <p style="margin-bottom: 10px; margin-top: 15px;"><strong>方式2：Universal Link - Main</strong></p>
+                <div class="link-display">https://lite.m.iqiyi.com/main/a/test?url=REPLACE_URL</div>
                 
-                <p style="margin-bottom: 10px; margin-top: 15px;"><strong>方式3：CommonWebView</strong></p>
-                <div class="link-display">iqiyi://router/common_webview?url=REPLACE_URL</div>
+                <p style="margin-bottom: 10px; margin-top: 15px;"><strong>方式3：iqiyilite:// 协议</strong></p>
+                <div class="link-display">iqiyilite://mobile/dynamic_transfer?url=REPLACE_URL</div>
+                
+                <p style="margin-bottom: 10px; margin-top: 15px; color: #dc3545;"><strong>⚠️ 不支持：iqiyi://router/... 和 iqiyilite://router/... 格式</strong></p>
             </div>
         </div>
 
@@ -283,19 +299,42 @@
                     <li>查看检测结果</li>
                 </ol>
                 
-                <h3 style="margin-top: 20px; margin-bottom: 10px;">支持的 Deeplink 协议：</h3>
+                <h3 style="margin-top: 20px; margin-bottom: 10px;">✅ 经过验证的 Deeplink：</h3>
                 <ul style="margin-left: 20px; line-height: 1.8;">
-                    <li><code>iqiyi://</code> - 主协议</li>
-                    <li><code>iqiyilite://</code> - 极速版协议</li>
-                    <li><code>https://lite.m.iqiyi.com/</code> - Universal Link</li>
+                    <li><code>https://lite.m.iqiyi.com/action/.*</code> - Universal Link（推荐）</li>
+                    <li><code>https://lite.m.iqiyi.com/main/a/.*</code> - Universal Link</li>
+                    <li><code>iqiyilite://mobile/dynamic_transfer</code> - 动态路由</li>
+                    <li><code>iqiyilite://mobile/register_business/qyvideolite</code> - 注册业务</li>
                 </ul>
                 
-                <h3 style="margin-top: 20px; margin-bottom: 10px;">关键发现：</h3>
+                <h3 style="margin-top: 20px; margin-bottom: 10px; color: #dc3545;">❌ 不支持的 Deeplink：</h3>
+                <ul style="margin-left: 20px; line-height: 1.8;">
+                    <li><code>iqiyi://router/...</code> - AndroidManifest.xml 中无对应 Intent Filter</li>
+                    <li><code>iqiyilite://router/...</code> - AndroidManifest.xml 中无对应 Intent Filter</li>
+                </ul>
+                
+                <h3 style="margin-top: 20px; margin-bottom: 10px;">⚙️ 安全配置：</h3>
+                <ul style="margin-left: 20px; line-height: 1.8;">
+                    <li><code>mCheckUrlSecurity</code> - 控制是否进行 URL 安全检查</li>
+                    <li><code>mIsShouldAddJs</code> - 控制是否注入 JSBridge</li>
+                </ul>
+                
+                <h3 style="margin-top: 20px; margin-bottom: 10px;">🔑 关键发现：</h3>
                 <ul style="margin-left: 20px; line-height: 1.8;">
                     <li>WebView 会注入 <code>__$$_native_call_</code> 对象</li>
                     <li>该对象有 <code>invoke(String)</code> 方法可被调用</li>
                     <li>可以触发各种原生功能</li>
                 </ul>
+                
+                <h3 style="margin-top: 20px; margin-bottom: 10px;">💡 最可靠测试方式：</h3>
+                <div style="background: #d1ecf1; padding: 10px; border-radius: 6px;">
+                    <p style="margin: 0;">使用 ADB 命令测试，可以绕过浏览器限制：</p>
+                    <code style="display: block; margin-top: 10px; background: #fff; padding: 8px;">
+                        adb shell am start -W -a android.intent.action.VIEW \
+                        <br>&nbsp;&nbsp;-d "https://lite.m.iqiyi.com/action/test?url=YOUR_URL" \
+                        <br>&nbsp;&nbsp;com.qiyi.video.lite
+                    </code>
+                </div>
             </div>
         </div>
     </div>
@@ -319,18 +358,21 @@
             let deeplink = '';
             
             switch(routeType) {
-                case 'common_webview':
-                    deeplink = `iqiyi://router/common_webview?url=${encodeURIComponent(targetUrl)}`;
+                case 'universal_action':
+                    deeplink = `https://lite.m.iqiyi.com/action/test?url=${encodeURIComponent(targetUrl)}`;
                     break;
-                case 'online_service_new':
-                    deeplink = `iqiyi://router/online_service_new?ONLINE_SERVICE_URL=${encodeURIComponent(targetUrl)}`;
+                case 'universal_main':
+                    deeplink = `https://lite.m.iqiyi.com/main/a/test?url=${encodeURIComponent(targetUrl)}`;
                     break;
-                case 'lite_webview':
-                    deeplink = `iqiyilite://router/lite/webview/main_page?url=${encodeURIComponent(targetUrl)}`;
+                case 'iqiyilite_dynamic':
+                    deeplink = `iqiyilite://mobile/dynamic_transfer?url=${encodeURIComponent(targetUrl)}`;
+                    break;
+                case 'iqiyilite_register':
+                    deeplink = `iqiyilite://mobile/register_business/qyvideolite?url=${encodeURIComponent(targetUrl)}`;
                     break;
             }
             
-            // 添加额外参数
+            // 添加额外参数（注意：Universal Link 可能不支持额外参数通过 URL 传递）
             if (checkUrlSecurity === 'false') {
                 deeplink += '&mCheckUrlSecurity=false';
             }
