@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>爱奇艺极速版 Deeplink 唤起测试 (已验证方案)</title>
+    <title>爱奇艺极速版 - 多协议测试</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -20,14 +20,14 @@
             padding: 30px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
-        h1 { color: #2a5298; margin-bottom: 20px; font-size: 24px; text-align: center; }
-        h2 { color: #343a40; margin-bottom: 15px; font-size: 18px; }
+        h1 { color: #667eea; margin-bottom: 20px; font-size: 24px; text-align: center; }
         .section {
             margin: 20px 0;
             padding: 20px;
             background: #f8f9fa;
             border-radius: 8px;
         }
+        .section h2 { color: #343a40; margin-bottom: 15px; font-size: 18px; }
         .btn {
             display: block;
             width: 100%;
@@ -40,12 +40,14 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        .btn-primary { background: #2a5298; color: white; }
-        .btn-primary:hover { background: #1e3c72; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a67d8; }
         .btn-success { background: #28a745; color: white; }
         .btn-success:hover { background: #218838; }
         .btn-warning { background: #ffc107; color: #333; }
         .btn-warning:hover { background: #e0a800; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
         .link-display {
             background: #e9ecef;
             padding: 12px;
@@ -63,7 +65,6 @@
         .status.success { background: #d4edda; color: #155724; }
         .status.error { background: #f8d7da; color: #721c24; }
         .status.info { background: #d1ecf1; color: #0c5460; }
-        .status.warn { background: #fff3cd; color: #856404; }
         .input-group { margin: 10px 0; }
         .input-group label { display: block; margin-bottom: 5px; font-weight: 600; }
         .input-group input {
@@ -73,6 +74,19 @@
             border-radius: 6px;
             font-size: 14px;
         }
+        .protocol-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .protocol-card h3 { color: #495057; margin-bottom: 10px; font-size: 16px; }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
         .note {
             font-size: 12px;
             color: #666;
@@ -81,218 +95,216 @@
             background: #fff3cd;
             border-radius: 6px;
         }
-        ul { margin-left: 20px; line-height: 1.8; }
-        .tabs { display: flex; gap: 5px; margin-bottom: 15px; }
-        .tab { flex: 1; padding: 10px; background: #dee2e6; border: none; cursor: pointer; border-radius: 6px; }
-        .tab.active { background: #2a5298; color: white; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📱 爱奇艺极速版 Deeplink 唤起测试</h1>
+        <h1>📱 爱奇艺极速版 - 多协议测试</h1>
         
         <div class="status info">
-            💡 <strong>更新</strong>: 基于 AndroidManifest 真实分析结果，只提供经过验证的方案！
-        </div>
-
-        <div class="tabs">
-            <button class="tab active" onclick="showTab('universal')">Universal Link (推荐)</button>
-            <button class="tab" onclick="showTab('iqiyilite')">iqiyilite:// 协议</button>
-            <button class="tab" onclick="showTab('adb')">ADB 命令</button>
-        </div>
-
-        <!-- 方式1: Universal Link (HTTPS) - 最推荐 -->
-        <div id="universal" class="tab-content active">
-            <div class="section">
-                <h2>🌐 Universal Link / App Link (HTTPS)</h2>
-                <p style="color: #28a745; font-weight: 600;">✅ 这是最推荐的方式，浏览器支持最好！</p>
-                
-                <div class="input-group">
-                    <label>测试 URL（您的 POC 地址）:</label>
-                    <input type="text" id="universalUrl" value="https://your-server.com/deeplink-poc.html" placeholder="输入要加载的 URL">
-                </div>
-                
-                <button class="btn btn-success" onclick="testUniversalLink()">
-                    🚀 方式 1: /action/test 路径
-                </button>
-                
-                <button class="btn btn-primary" onclick="testUniversalLinkMain()">
-                    📱 方式 2: /main/a/ 路径
-                </button>
-                
-                <div class="link-display" id="universalLinkDisplay">
-                    点击上方按钮查看和复制链接
-                </div>
-                
-                <div class="note">
-                    💡 提示：从 AndroidManifest 分析，<code>https://lite.m.iqiyi.com/action/.*</code> 是支持的通用路由
-                </div>
-            </div>
-        </div>
-
-        <!-- 方式2: iqiyilite:// 自定义协议 -->
-        <div id="iqiyilite" class="tab-content">
-            <div class="section">
-                <h2>🔗 iqiyilite:// 自定义协议</h2>
-                
-                <div class="input-group">
-                    <label>测试 URL:</label>
-                    <input type="text" id="iqiyiliteUrl" value="https://your-server.com/deeplink-poc.html" placeholder="输入要加载的 URL">
-                </div>
-                
-                <button class="btn btn-primary" onclick="testIqiyiliteDynamic()">
-                    ⚡ /mobile/dynamic_transfer
-                </button>
-                
-                <button class="btn btn-warning" onclick="testIqiyiliteRegister()">
-                    📋 /mobile/register_business/qyvideolite
-                </button>
-                
-                <div class="link-display" id="iqiyiliteLinkDisplay">
-                    点击上方按钮查看和复制链接
-                </div>
-                
-                <div class="note">
-                    ⚠️ 注意：从 AndroidManifest 中，只有特定路径支持 iqiyilite:// 协议
-                </div>
-            </div>
-        </div>
-
-        <!-- 方式3: ADB 命令 -->
-        <div id="adb" class="tab-content">
-            <div class="section">
-                <h2>💻 ADB 测试命令 (最可靠)</h2>
-                
-                <div class="input-group">
-                    <label>测试 URL:</label>
-                    <input type="text" id="adbUrl" value="https://your-server.com/deeplink-poc.html" placeholder="输入要加载的 URL">
-                </div>
-                
-                <button class="btn btn-primary" onclick="showAdbCommands()">
-                    📄 显示 ADB 命令
-                </button>
-                
-                <div class="link-display" id="adbCommands" style="font-size: 11px;">
-                    点击按钮查看 ADB 命令
-                </div>
-                
-                <div class="note">
-                    ✅ 优点：ADB 方式绕过浏览器限制，最可靠
-                </div>
-            </div>
-        </div>
-
-        <!-- AndroidManifest 分析结果 -->
-        <div class="section">
-            <h2>🔍 AndroidManifest 分析结果</h2>
-            <p style="margin-bottom: 10px;"><strong>❌ 之前假设的 iqiyi://router/... 没有在 AndroidManifest 中找到！</strong></p>
-            <p style="margin-bottom: 10px;"><strong>✅ 已确认的支持：</strong></p>
-            <ul>
-                <li><code>https://lite.m.iqiyi.com/action/.*</code> - Universal Link</li>
-                <li><code>https://lite.m.iqiyi.com/main/a/.*</code> - Universal Link</li>
-                <li><code>iqiyilite://mobile/dynamic_transfer</code> - 自定义协议</li>
-                <li><code>iqiyilite://mobile/register_business/qyvideolite</code> - 自定义协议</li>
-            </ul>
+            <strong>💡 测试多种唤起方式</strong><br>
+            基于 AndroidManifest.xml 分析，尝试所有可能的协议和方式。
         </div>
 
         <div class="section">
-            <h2>💡 如果还是无法唤起？</h2>
-            <ol style="margin-left: 20px; line-height: 1.8;">
-                <li>确认手机上已安装爱奇艺极速版 v6.5.30</li>
-                <li>尝试将链接复制到短信/微信中点击 (某些浏览器拦截自定义协议)</li>
-                <li>使用 ADB 命令测试 (最可靠)</li>
-                <li>检查手机是否禁用了该应用的外部链接打开权限</li>
-            </ol>
+            <h2>🎯 配置测试 URL</h2>
+            <div class="input-group">
+                <label>目标测试页面 URL：</label>
+                <input type="text" id="testUrl" value="https://your-server.com/deeplink-poc.html" placeholder="输入要加载的URL">
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔗 方式1：iqiyilite:// 协议 (已验证)</h2>
+            
+            <div class="protocol-card">
+                <h3>dynamic_transfer</h3>
+                <button class="btn btn-primary" onclick="testProtocol('iqiyilite://mobile/dynamic_transfer')">
+                    测试 iqiyilite://mobile/dynamic_transfer
+                </button>
+                <div class="link-display" id="link1"></div>
+            </div>
+            
+            <div class="protocol-card">
+                <h3>register_business</h3>
+                <button class="btn btn-primary" onclick="testProtocol('iqiyilite://mobile/register_business/qyvideolite')">
+                    测试 iqiyilite://mobile/register_business/qyvideolite
+                </button>
+                <div class="link-display" id="link2"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔍 方式2：尝试 iqiyi:// 协议 (可能不支持)</h2>
+            
+            <div class="protocol-card">
+                <h3>尝试 router 路径</h3>
+                <button class="btn btn-warning" onclick="testProtocol('iqiyi://router/common_webview')">
+                    尝试 iqiyi://router/common_webview
+                </button>
+                <div class="link-display" id="link3"></div>
+            </div>
+            
+            <div class="protocol-card">
+                <h3>尝试其他路径</h3>
+                <button class="btn btn-warning" onclick="testProtocol('iqiyi://mobile/test')">
+                    尝试 iqiyi://mobile/test
+                </button>
+                <div class="link-display" id="link4"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>⚡ 方式3：Intent 语法 (Android 专用)</h2>
+            
+            <div class="protocol-card">
+                <h3>Component 方式</h3>
+                <button class="btn btn-success" onclick="testIntent('component')">
+                    尝试 Intent Component 方式
+                </button>
+                <div class="link-display" id="link5"></div>
+            </div>
+            
+            <div class="protocol-card">
+                <h3>Package 方式</h3>
+                <button class="btn btn-success" onclick="testIntent('package')">
+                    尝试 Intent Package 方式
+                </button>
+                <div class="link-display" id="link6"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🌐 方式4：Universal Links (HTTPS)</h2>
+            
+            <div class="protocol-card">
+                <h3>/action/ 路径</h3>
+                <button class="btn btn-primary" onclick="testProtocol('https://lite.m.iqiyi.com/action/test')">
+                    测试 https://lite.m.iqiyi.com/action/test
+                </button>
+                <div class="link-display" id="link7"></div>
+            </div>
+            
+            <div class="protocol-card">
+                <h3>/main/a/ 路径</h3>
+                <button class="btn btn-primary" onclick="testProtocol('https://lite.m.iqiyi.com/main/a/test')">
+                    测试 https://lite.m.iqiyi.com/main/a/test
+                </button>
+                <div class="link-display" id="link8"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🏃 方式5：隐藏方式 (iframe + location)</h2>
+            
+            <button class="btn btn-danger" onclick="testAggressive()">
+                🚀 尝试所有方式 (Aggrssive)
+            </button>
+            
+            <div class="note">
+                💡 这种方式会尝试多种方法依次唤起应用，成功率更高。
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📱 ADB 命令 (最可靠)</h2>
+            
+            <p style="margin-bottom: 10px;">如果浏览器方式不工作，请使用 ADB 命令：</p>
+            
+            <div class="link-display">
+# 通过 Universal Link
+adb shell am start -W -a android.intent.action.VIEW \
+  -d "https://lite.m.iqiyi.com/action/test?url=REPLACE_URL" \
+  com.qiyi.video.lite
+
+# 通过自定义协议
+adb shell am start -W -a android.intent.action.VIEW \
+  -d "iqiyilite://mobile/dynamic_transfer?url=REPLACE_URL" \
+  com.qiyi.video.lite
+
+# 直接启动 Activity 并传参
+adb shell am start -W -n com.qiyi.video.lite/.ui.activity.TransferFromOutActivity \
+  --es url "REPLACE_URL" \
+  --ez mCheckUrlSecurity false \
+  --ez mIsShouldAddJs true
+
+# 启动 CommonOnLineServiceActivity
+adb shell am start -W -n com.qiyi.video.lite/com.iqiyi.webcontainer.commonwebview.CommonOnLineServiceActivity \
+  --es url "REPLACE_URL" \
+  --ez mCheckUrlSecurity false \
+  --ez mIsShouldAddJs true
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 测试结果记录</h2>
+            <div id="testResults">
+                <div class="status info">点击上方按钮开始测试...</div>
+            </div>
         </div>
     </div>
 
     <script>
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
+        function getTestUrl() {
+            return document.getElementById('testUrl').value;
         }
 
-        function encodeUrl(url) {
-            return encodeURIComponent(url);
+        function addResult(type, message) {
+            const resultsDiv = document.getElementById('testResults');
+            const time = new Date().toLocaleTimeString();
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `status ${type}`;
+            resultDiv.textContent = `[${time}] ${message}`;
+            resultsDiv.insertBefore(resultDiv, resultsDiv.firstChild);
         }
 
-        function copyToDisplay(elementId, text) {
-            document.getElementById(elementId).textContent = text;
-        }
-
-        // Universal Link 测试
-        function testUniversalLink() {
-            const targetUrl = document.getElementById('universalUrl').value;
-            const deeplink = `https://lite.m.iqiyi.com/action/test?url=${encodeUrl(targetUrl)}`;
-            copyToDisplay('universalLinkDisplay', deeplink);
-            console.log('尝试 Universal Link (action/test):', deeplink);
-            tryOpenLink(deeplink);
-        }
-
-        function testUniversalLinkMain() {
-            const targetUrl = document.getElementById('universalUrl').value;
-            const deeplink = `https://lite.m.iqiyi.com/main/a/test?url=${encodeUrl(targetUrl)}`;
-            copyToDisplay('universalLinkDisplay', deeplink);
-            console.log('尝试 Universal Link (main/a/test):', deeplink);
-            tryOpenLink(deeplink);
-        }
-
-        // iqiyilite:// 协议测试
-        function testIqiyiliteDynamic() {
-            const targetUrl = document.getElementById('iqiyiliteUrl').value;
-            const deeplink = `iqiyilite://mobile/dynamic_transfer?url=${encodeUrl(targetUrl)}`;
-            copyToDisplay('iqiyiliteLinkDisplay', deeplink);
-            console.log('尝试 iqiyilite:// (dynamic_transfer):', deeplink);
-            tryOpenLink(deeplink);
-        }
-
-        function testIqiyiliteRegister() {
-            const targetUrl = document.getElementById('iqiyiliteUrl').value;
-            const deeplink = `iqiyilite://mobile/register_business/qyvideolite?url=${encodeUrl(targetUrl)}`;
-            copyToDisplay('iqiyiliteLinkDisplay', deeplink);
-            console.log('尝试 iqiyilite:// (register_business):', deeplink);
-            tryOpenLink(deeplink);
-        }
-
-        // ADB 命令显示
-        function showAdbCommands() {
-            const targetUrl = document.getElementById('adbUrl').value;
-            const commands = `# 方式 1: 通过 View action 和 URL
-adb shell am start -W -a android.intent.action.VIEW \\
-  -d "https://lite.m.iqiyi.com/action/test?url=${targetUrl}" \\
-  com.qiyi.video.lite
-
-# 方式 2: 直接启动 TransferFromOutActivity
-adb shell am start -W -n com.qiyi.video.lite/.ui.activity.TransferFromOutActivity \\
-  --es url "${targetUrl}"
-
-# 方式 3: 通过 iqiyilite:// 协议
-adb shell am start -W -a android.intent.action.VIEW \\
-  -d "iqiyilite://mobile/dynamic_transfer?url=${targetUrl}" \\
-  com.qiyi.video.lite
-
-# 查看日志
-adb logcat -c
-adb logcat | grep -i "qiyi\\|TransferFromOut"`;
-            document.getElementById('adbCommands').textContent = commands;
-        }
-
-        // 通用尝试打开链接
-        function tryOpenLink(url) {
-            console.log('Opening:', url);
+        function testProtocol(baseUrl) {
+            const testUrl = getTestUrl();
+            const separator = baseUrl.includes('?') ? '&' : '?';
+            const deeplink = `${baseUrl}${separator}url=${encodeURIComponent(testUrl)}&mCheckUrlSecurity=false&mIsShouldAddJs=true`;
             
-            // 方式1: 直接 location.href
+            // 显示链接
+            const linkId = 'link' + (Date.now() % 10 + 1);
+            const elements = document.querySelectorAll('.link-display');
+            for (let el of elements) {
+                if (!el.textContent || el.textContent.includes('base64')) {
+                    el.textContent = deeplink;
+                    break;
+                }
+            }
+            
+            console.log('Testing:', deeplink);
+            addResult('info', `尝试唤起: ${baseUrl}`);
+            
+            tryOpen(deeplink);
+        }
+
+        function testIntent(type) {
+            const testUrl = getTestUrl();
+            let intentUri = '';
+            
+            if (type === 'component') {
+                intentUri = `intent:#Intent;action=android.intent.action.VIEW;category=android.intent.category.DEFAULT;category=android.intent.category.BROWSABLE;component=com.qiyi.video.lite/.ui.activity.TransferFromOutActivity;S.url=${encodeURIComponent(testUrl)};B.mCheckUrlSecurity=false;B.mIsShouldAddJs=true;end`;
+            } else {
+                intentUri = `intent:#Intent;action=android.intent.action.VIEW;category=android.intent.category.DEFAULT;category=android.intent.category.BROWSABLE;package=com.qiyi.video.lite;S.url=${encodeURIComponent(testUrl)};B.mCheckUrlSecurity=false;B.mIsShouldAddJs=true;end`;
+            }
+            
+            document.getElementById(type === 'component' ? 'link5' : 'link6').textContent = intentUri;
+            console.log('Testing Intent:', intentUri);
+            addResult('info', `尝试 Intent ${type} 方式`);
+            
+            tryOpen(intentUri);
+        }
+
+        function tryOpen(url) {
+            // 方式1: location.href
             try {
                 window.location.href = url;
-            } catch(e) {
+            } catch (e) {
                 console.error('location.href failed:', e);
             }
             
-            // 方式2: 创建 <a> 标签
+            // 方式2: a 标签
             setTimeout(() => {
                 try {
                     const a = document.createElement('a');
@@ -301,10 +313,52 @@ adb logcat | grep -i "qiyi\\|TransferFromOut"`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                } catch(e) {
+                } catch (e) {
                     console.error('a.click failed:', e);
                 }
             }, 100);
+        }
+
+        function testAggressive() {
+            const testUrl = getTestUrl();
+            addResult('info', '开始 Aggressive 模式测试...');
+            
+            const urls = [
+                `iqiyilite://mobile/dynamic_transfer?url=${encodeURIComponent(testUrl)}&mCheckUrlSecurity=false&mIsShouldAddJs=true`,
+                `iqiyilite://mobile/register_business/qyvideolite?url=${encodeURIComponent(testUrl)}&mCheckUrlSecurity=false&mIsShouldAddJs=true`,
+                `https://lite.m.iqiyi.com/action/test?url=${encodeURIComponent(testUrl)}`,
+                `https://lite.m.iqiyi.com/main/a/test?url=${encodeURIComponent(testUrl)}`,
+                `iqiyi://router/common_webview?url=${encodeURIComponent(testUrl)}&mCheckUrlSecurity=false&mIsShouldAddJs=true`,
+                `iqiyi://mobile/test?url=${encodeURIComponent(testUrl)}`,
+            ];
+            
+            let index = 0;
+            const tryNext = () => {
+                if (index < urls.length) {
+                    const url = urls[index];
+                    console.log(`[${index + 1}/${urls.length}] Trying:`, url);
+                    addResult('info', `尝试 ${index + 1}/${urls.length}`);
+                    
+                    // iframe 方式
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = url;
+                    document.body.appendChild(iframe);
+                    setTimeout(() => document.body.removeChild(iframe), 1000);
+                    
+                    // location 方式
+                    setTimeout(() => {
+                        try {
+                            window.location.href = url;
+                        } catch (e) {}
+                    }, 200);
+                    
+                    index++;
+                    setTimeout(tryNext, 800);
+                }
+            };
+            
+            tryNext();
         }
     </script>
 </body>
